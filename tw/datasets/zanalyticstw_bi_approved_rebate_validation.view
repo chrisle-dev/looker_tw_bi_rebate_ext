@@ -1,0 +1,263 @@
+# The name of this view in Looker is "Zanalyticstw Bi Approved Rebate Validation"
+
+view: zanalyticstw_bi_approved_rebate_validation {
+  # The sql_table_name parameter indicates the underlying database table
+  # to be used for all fields in this view.
+  # sql_table_name: `zp-dev-looker-analytics.infrared.zanalytics-TW_BI_APPROVED_REBATE_VALIDATION` ;;
+
+  derived_table: {
+    sql:
+
+    select * from `zp-dev-looker-analytics.infrared.zanalytics-TW_BI_APPROVED_REBATE_VALIDATION`
+    ;;
+  }
+  dimension: contract_clean {
+    label: "Contract"
+    type: string
+    sql: concat(${contract}, " ", ${contract_name}) ;;
+  }
+  dimension: contract_group {
+    type: string
+    sql:  case when ${contract_clean} is null or ${contract_clean} = '' or ${contract_clean} = ' ' then ${customer} else ${contract} end  ;;
+  }
+
+  dimension_group: actual_rebate_until {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.actual_rebate_until ;;
+  }
+
+  dimension_group: approved {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.approved_date ;;
+  }
+
+  dimension_group: bi_update {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.bi_update_date ;;
+  }
+  # Here's what a typical dimension looks like in LookML.
+  # A dimension is a groupable field that can be used to filter query results.
+  # This dimension will be called "Bq Table Row ID" in Explore.
+
+  dimension: bq_table_row_id {
+    type: string
+    sql: ${TABLE}.bq_table_row_id ;;
+  }
+
+  dimension: channel {
+    type: string
+    sql: ${TABLE}.channel ;;
+  }
+
+  dimension: contract {
+    type: string
+    sql: ${TABLE}.contract ;;
+  }
+
+  dimension: contract_name {
+    type: string
+    sql: ${TABLE}.contract_name ;;
+  }
+
+  dimension: country {
+    type: string
+    map_layer_name: countries
+    sql: ${TABLE}.country ;;
+  }
+
+  dimension: country_id {
+    type: number
+    sql: ${TABLE}.country_id ;;
+  }
+
+  dimension: custno {
+    type: string
+    sql: ${TABLE}.custno ;;
+  }
+  dimension: customer {
+    type: string
+    sql: concat(${custno}, " ", ${customername}) ;;
+  }
+  dimension: sku {
+    type: string
+    sql: case when ${skuno} is null or ${skuno} = '' then 'Hospital Level' else concat(${skuno}, ' ', coalesce(${skudescription},'')) end  ;;
+  }
+
+  dimension: customername {
+    type: string
+    sql: ${TABLE}.customername ;;
+  }
+
+  dimension: deleted_date {
+    type: string
+    sql: ${TABLE}.deleted_date ;;
+  }
+
+  dimension: fg_rebate_qty {
+    type: number
+    sql: ${TABLE}.fg_rebate_qty ;;
+  }
+
+  # A measure is a field that uses a SQL aggregate function. Here are defined sum and average
+  # measures for this dimension, but you can also add measures of many different aggregates.
+  # Click on the type parameter to see all the options in the Quick Help panel on the right.
+
+  measure: total_fg_rebate_qty {
+    type: sum
+    sql: ${fg_rebate_qty} ;;  }
+  measure: average_fg_rebate_qty {
+    type: average
+    sql: ${fg_rebate_qty} ;;  }
+
+  dimension: kam {
+    type: string
+    sql: ${TABLE}.kam ;;
+  }
+
+  dimension: match_type {
+    type: string
+    sql: ${TABLE}.match_type ;;
+  }
+  dimension: rebate_for_to {
+    label: "Rebate For/To"
+    type: string
+    sql: case when ${match_type} = "Rebate For" then "Rebate For"
+              when ${match_type} = "Approved Rebate" then "Rebate To"
+              when ${match_type} = "Matched Rebate" then "Rebate To"
+              end
+          ;;
+  }
+
+  dimension: pg {
+    type: string
+    sql: ${TABLE}.pg ;;
+  }
+  dimension: pg_inc_hp {
+    label: "PG (inc HP)"
+    type: string
+    sql: COALESCE(${pg}, 'HP') ;;
+  }
+
+  dimension: rebate_amt_exc_vat {
+    type: string
+    sql: ${TABLE}.rebate_amt_exc_vat ;;
+  }
+  dimension: rebate_amt_inc_vat {
+    label: "Rebate Amt (Inc VAT)"
+    type: number
+    sql: round(coalesce(safe_cast(${rebate_amt_exc_vat} as float64),0)*1.05,0) ;;
+  }
+  measure: sum_rebate_amt_inc_vat {
+    type: sum
+    sql: ${rebate_amt_inc_vat} ;;
+  }
+
+  dimension: rebate_description {
+    type: string
+    sql: ${TABLE}.rebate_description ;;
+  }
+
+  dimension: rebate_id {
+    label: "IRIS Rebate ID"
+    type: string
+    sql: ${TABLE}.rebate_id ;;
+  }
+
+  dimension: ris_territory {
+    type: string
+    sql: ${TABLE}.ris_territory ;;
+  }
+
+  dimension: salesorg {
+    type: number
+    sql: ${TABLE}.salesorg ;;
+  }
+
+  dimension: salesorg1 {
+    type: string
+    sql: ${TABLE}.salesorg1 ;;
+  }
+
+  dimension_group: save_date {
+    type: time
+    timeframes: [raw, date, week, month, quarter, year]
+    convert_tz: no
+    datatype: date
+    sql: ${TABLE}.save_date ;;
+  }
+
+  dimension: save_datetime {
+    type: string
+    sql: ${TABLE}.save_datetime ;;
+  }
+
+  dimension: save_time {
+    type: string
+    sql: ${TABLE}.save_time ;;
+  }
+
+  dimension: scheme_no {
+    type: string
+    sql: ${TABLE}.scheme_no ;;
+  }
+  dimension: noto_for_auditor {
+    type: string
+    sql: case when scheme_no = 'P283H12G0' and rebate_id = '20230712_2' THEN '因未勾選 one-off 而多出 $58,752，預計下次發送 Rebate 時將扣除此筆金額' end
+      ;;
+  }
+
+  dimension: skudescription {
+    type: string
+    sql: ${TABLE}.skudescription ;;
+  }
+
+  dimension: skuno {
+    type: string
+    sql: ${TABLE}.skuno ;;
+  }
+
+  dimension: view_name {
+    type: string
+    sql: ${TABLE}.view_name ;;
+  }
+
+  dimension: year_month {
+    type: string
+    sql: ${TABLE}.year_month ;;
+  }
+
+  dimension: zone {
+    type: string
+    sql: ${TABLE}.zone ;;
+  }
+
+  dimension: zonename {
+    type: string
+    sql: ${TABLE}.zonename ;;
+  }
+
+  dimension: zp_update_date {
+    type: string
+    sql: ${TABLE}.zp_update_date ;;
+  }
+
+  dimension_group: zuellig_billing {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.zuellig_billing_date ;;
+  }
+
+  dimension: page_4_header_1 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #C3D3D0; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> IRIS - Actual Rebate Detail <span></p> ;;
+  }
+
+  measure: count {
+    type: count
+    drill_fields: [customername, view_name, contract_name, zonename]
+  }
+}

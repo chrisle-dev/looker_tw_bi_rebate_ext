@@ -1,0 +1,3117 @@
+# The name of this view in Looker is "Zanalyticstw Bi Rebate Consolidate V3"
+
+
+
+view: zanalyticstw_bi_rebate_consolidate_v3 {
+  # The sql_table_name parameter indicates the underlying database table
+  # to be used for all fields in this view.
+  # sql_table_name: `zp-dev-looker-analytics.infrared.zanalytics-TW_BI_REBATE_CONSOLIDATE_V3` ;;
+
+  derived_table: {
+    sql:
+      select *,
+      case when rn =1 then test else 0 end as test2,
+      case when rn2 =1 then mau_so else 0 end as mau_so_final,
+      SUM(
+          CASE WHEN match_type = "Original"
+                AND {% condition sku_f %} rebate_for_sku_for_set {% endcondition %}
+                AND filter_rebate_to_customer = "Keep"
+                AND customer_has_rebate_on_sku > 0
+                THEN COALESCE(Value_NHIprice_invoice_selected_planning_period, 0)
+                ELSE 0
+          END)
+      OVER(PARTITION BY for_contract_customer) AS gross_sales_selected_customer,
+      SUM(CASE WHEN filter_rebate_to_customer_sku = 'Keep'
+                THEN rebate_amt_limit
+          END)
+      OVER(PARTITION BY rebate_to_category) AS dm_non_rebate_amt_limit,
+
+      SUM(
+      CASE WHEN {% condition sku_f %} rebate_for_sku_for_set {% endcondition %}
+      AND rebate_for_filter_planning_period_dim = 'True'
+      THEN COALESCE(outstanding_rebate_by_perc_planning_period ,0)
+      ELSE 0
+      END)
+      OVER(PARTITION BY rebate_to_category, for_contract_customer)
+      +
+      SUM(
+      CASE WHEN {% condition sku_f %} rebate_for_sku_for_set {% endcondition %}
+      AND SKUCode_BI != ''
+      AND rebate_for_filter_planning_period_dim = 'True'
+      THEN outstanding_rebate_fixed_planning_period_dim
+      ELSE 0
+      END)
+      OVER(PARTITION BY rebate_to_category, for_contract_customer)
+      +
+      SUM(
+      CASE WHEN {% condition sku_f %} rebate_for_sku_for_set {% endcondition %}
+      AND SKUCode_BI != ''
+      AND rebate_for_filter_planning_period_dim = 'True'
+      THEN outstanding_rebate_fixed_planning_period_dim
+      ELSE 0
+      END)
+      OVER(PARTITION BY for_contract_customer)
+      * SAFE_DIVIDE(
+      SUM(Value_NHIprice_invoice_selected_planning_period)
+      OVER(PARTITION BY rebate_to_category, for_contract_customer)
+      , SUM(Value_NHIprice_invoice_selected_planning_period)
+      OVER(PARTITION BY for_contract_customer)
+      )
+      AS outstanding_rebate_dm_non,
+      SUM(
+      CASE WHEN filter_rebate_to_customer_sku = 'Keep'
+      THEN rebate_amt_limit
+      ELSE 0
+      END)
+      OVER(PARTITION BY rebate_to_category, for_contract_customer) AS cust_dm_non_rebate_amt_limit,
+
+      SUM(
+      CASE WHEN filter_rebate_to_customer_sku = 'Keep'
+      THEN CASE WHEN date_dim >= DATE_TRUNC(CURRENT_DATE(),YEAR)
+      AND date_dim <= CURRENT_DATE()
+      THEN COALESCE( Value_Transaction_invoice * 1.05, 0 )
+      ELSE 0
+      END
+      - CASE WHEN match_type = 'For Approval'
+      THEN COALESCE( rebate_amt_exc_vat * 1.05 , 0 )
+      ELSE 0
+      END
+      END)
+      OVER(PARTITION BY rebate_to_category, CustomerCode_BI) AS rebate_amt_limit_percent_den
+      from
+
+      -- LEVEL 7
+      (select *,
+      row_number() over (partition by dm_products_dim, for_contract_customer order by test) as rn,
+      row_number() over (partition by for_contract_customer) as rn2,
+      SUM(DISTINCT
+      CASE WHEN filter_rebate_to_customer_sku = 'Keep'
+      THEN rebate_amt_limit
+      ELSE 0
+      END)
+      OVER( PARTITION BY CustomerCode_BI ) as cust_rebate_amt_limit,
+      SUM(DISTINCT
+      CASE WHEN filter_rebate_to_customer_sku = 'Keep'
+      THEN Value_NHIprice_invoice_selected_planning_period
+      ELSE 0
+      END)
+      OVER( PARTITION BY CustomerCode_BI ) as customer_has_rebate_on_sku,
+      CASE WHEN rebate_for_sku_contains_dm > 0
+      AND dm_products_dim = "DM"
+      THEN "DM"
+      WHEN rebate_for_sku_contains_dm > 0
+      THEN "Non-DM"
+      ELSE "N.A."
+      END AS rebate_to_category
+      from
+
+      -- LEVEL 6
+      (select *,
+      sum(Value_NHIprice_invoice_selected_planning_period) over(partition by dm_products_dim, for_contract_customer) as test,
+      sum(Value_NHIprice_invoice_selected_planning_period) over(partition by for_contract_customer) as mau_so,
+
+      CASE WHEN {% condition cust_sku_f %} rebate_to_customer_sku {% endcondition %}
+      THEN "Keep"
+      END AS filter_rebate_to_customer_sku,
+      SUM(
+      CASE WHEN {% condition sku_f %} rebate_for_sku_for_set {% endcondition %}
+      AND match_type = "Original"
+      THEN COALESCE(Value_NHIprice_invoice_selected_planning_period, 0)
+      ELSE 0
+      END)
+      OVER(PARTITION BY CustomerCode_BI) AS gross_sales,
+      SUM(
+      CASE WHEN {% condition sku_f %} rebate_for_sku_for_set {% endcondition %}
+      AND rebate_for_filter_planning_period_dim = 'True'
+      THEN COALESCE(outstanding_rebate_by_perc_planning_period ,0)
+      ELSE 0
+      END)
+      OVER(PARTITION BY for_contract_customer)
+      +
+      SUM(
+      CASE WHEN {% condition sku_f %} rebate_for_sku_for_set {% endcondition %}
+      AND rebate_for_filter_planning_period_dim = 'True'
+      THEN COALESCE(outstanding_rebate_fixed_planning_period_dim ,0)
+      ELSE 0
+      END)
+      OVER(PARTITION BY for_contract_customer)
+      AS outstanding_rebate,
+
+      SUM(
+      CASE WHEN {% condition sku_f %} rebate_for_sku_for_set {% endcondition %}
+      AND rebate_for_filter_planning_period_dim = 'True'
+      THEN COALESCE(outstanding_rebate_by_perc_planning_period ,0)
+      ELSE 0
+      END)
+      OVER(PARTITION BY for_contract_customer) as outstanding_rebate_1,
+
+      SUM(
+      CASE WHEN {% condition sku_f %} rebate_for_sku_for_set {% endcondition %}
+      AND rebate_for_filter_planning_period_dim = 'True'
+      THEN COALESCE(outstanding_rebate_fixed_planning_period_dim ,0)
+      ELSE 0
+      END)
+      OVER(PARTITION BY for_contract_customer) AS outstanding_rebate_2,
+
+      SAFE_DIVIDE(
+      SUM( Value_NHIprice_invoice_selected_planning_period )
+      OVER(PARTITION BY for_contract_customer, dm_products_dim)
+      ,
+      SUM( Value_NHIprice_invoice_selected_planning_period )
+      OVER(PARTITION BY for_contract_customer)
+      ) AS dm_gross_sales_proportion_planning_period,
+      SUM( Value_NHIprice_invoice_selected_planning_period )
+      OVER(PARTITION BY for_contract_customer, dm_products_dim) as dm_gross_sales_proportion_planning_period_1,
+      SUM( Value_NHIprice_invoice_selected_planning_period )
+      OVER(PARTITION BY for_contract_customer) AS dm_gross_sales_proportion_planning_period_2,
+
+      COUNT(DISTINCT
+      CASE WHEN {% condition sku_f %} rebate_for_sku_for_set {% endcondition %}
+      AND rebate_for_category in ("DM","HP")
+      THEN sku_dim
+      END)
+      OVER() AS rebate_for_sku_contains_dm,
+      (case when frequency = 'Pending' then 0
+      when extract(year from date_clean) < extract(year from current_date()-1) then cumulated_rebate_by_perc_valid_tracking_period else 0 end ) + coalesce(outstanding_rebate_fixed_valid_prev_year,0)  as rebate_outstanding_prev_years_tracking_period,
+
+      sum(case when rank_actual_rebate_per_contract_per_month_total = 1
+      then month_actual_rebate_per_contract_per_month_total
+      else 0
+      end)
+      over(partition by left(cast(bi_update_date as string), 4)
+      order by left(cast(bi_update_date as string), 7) asc
+      ) as actual_rebate_per_contract_per_month_running_total,
+      (case when frequency = 'Pending' then 0
+      when extract(year from date_clean) = extract(year from current_date()-1) then cumulated_rebate_by_perc_valid_tracking_period else 0 end) + coalesce(outstanding_rebate_fixed_valid_current_year,0) as rebate_outstanding_current_years_tracking_period
+      FROM
+
+      -- LEVEL 5
+      (select *,
+      case when {% condition customer_f %} rebate_to_customer {% endcondition %}
+      and sku_dim is not null
+      and sku_dim != ''
+      and ( cust_sku_sales_from_last_year != 0
+      or CustomerCode_BI = '80316B')
+      then concat(Customer_Name_BI, ': ', sku_dim)
+      else "[DO NOT SELECT] Outside selected Customer"
+      end as rebate_to_customer_sku,
+      case when {% condition customer_f %} rebate_to_customer {% endcondition %}
+      then "Keep"
+      end as filter_rebate_to_customer,
+      CASE WHEN no_of_schemes_rebate_for_sku >= 1
+      THEN CASE WHEN scheme_fixed = 'Y'
+      THEN CONCAT('(FA)', sku_dim, ':', Rebate_Description, ' Starting on ', contract_start_string)
+      ELSE CONCAT(sku_dim, ':', Rebate_Description, ' Starting on ', contract_start_string)
+      END
+      ELSE ' [DO NOT SELECT] Products w/o Rebate'
+      END AS rebate_for_sku_for_set,
+      case when {{actual_rebate_period._parameter_value}} = 1 and (extract(year from year_month) < extract(year from current_date()-1 ) and year_month > cast({{rebate_tracking_start._parameter_value}} as date) and year_month <= tracking_end_end_last_month)
+      or (year_month is null and extract(year from cast(bi_update_date as date) ) < extract(year from current_date()-1) and cast(bi_update_date as date) >= cast({{rebate_tracking_start._parameter_value}} as date) and cast(bi_update_date as date) <= tracking_end_end_last_month) then actual_rebate_per_contract_per_month_aggregation_issue_2023
+      when {{actual_rebate_period._parameter_value}} = 2 and (extract(year from cast(bi_update_date as date) ) < extract(year from current_date() -1 ) and cast(bi_update_date as date)>=cast({{rebate_tracking_start._parameter_value}} as date) and cast(bi_update_date as date) <= tracking_end_end_last_month) then actual_rebate_per_contract_per_month_aggregation_issue_2023 else 0 end as actual_rebate_prev_years_tracking_period,
+
+      case when {{actual_rebate_period._parameter_value}} = 1 and
+      ( (extract(year from year_month) = extract(year from current_date()-1) and year_month >= cast({{rebate_tracking_start._parameter_value}}  as date) and year_month <= tracking_end_end_last_month)
+      or
+      (year_month is null and extract(year from cast(bi_update_date as date)) = extract(year from current_date()-1) and cast(bi_update_date as date) >= cast({{rebate_tracking_start._parameter_value}} as date)
+      and cast(bi_update_date as date) <=tracking_end_end_last_month)
+      )
+      THEN
+      (case when Scheme_Fixed = 'Y' and one__off = 'N' then
+      case when bi_update_date is null or cast(bi_update_date as date) < date_trunc(current_date(), year) then 0
+      when Rebate_ID is null and cast(bi_update_date as date) >= date_trunc(current_date(), year) then 0
+      when cast(bi_update_date as date) >= date_trunc(current_date(), year) then coalesce(rebate_fixed_amount_qty_converted_8b,0)
+      end
+      else actual_rebate_per_contract_per_month end)
+      when {{actual_rebate_period._parameter_value}} = 2 and
+      (extract(year from cast(bi_update_date as date)) = extract(year from current_date()-1) and cast(bi_update_date as date) >= cast({{rebate_tracking_start._parameter_value}}  as date) and cast(bi_update_date as date) <= tracking_end_end_last_month )
+      THEN
+      (case when Scheme_Fixed = 'Y' and one__off = 'N' then
+      case when bi_update_date is null or cast(bi_update_date as date) < date_trunc(current_date(), year) then 0
+      when Rebate_ID is null and cast(bi_update_date as date) >= date_trunc(current_date(), year) then 0
+      when cast(bi_update_date as date) >= date_trunc(current_date(), year) then coalesce(rebate_fixed_amount_qty_converted_8b,0)
+      end else actual_rebate_per_contract_per_month end)
+      else 0 end as actual_rebate_current_year_tracking_period,
+
+      case when {{actual_rebate_period._parameter_value}} = 1 and
+      ( (extract(year from year_month) = extract(year from current_date()-1) and year_month >= cast({{rebate_tracking_start._parameter_value}}  as date) and year_month <= tracking_end_end_last_month)
+      or
+      (year_month is null and extract(year from cast(bi_update_date as date)) = extract(year from current_date()-1) and cast(bi_update_date as date) >= cast({{rebate_tracking_start._parameter_value}} as date)
+      and cast(bi_update_date as date) <=tracking_end_end_last_month)
+      )
+      THEN
+      (case when Scheme_Fixed = 'Y' and one__off = 'N' then
+      case when bi_update_date is null or cast(bi_update_date as date) < date_trunc(current_date(), year) then 0
+      when Rebate_ID is null and cast(bi_update_date as date) >= date_trunc(current_date(), year) then 0
+      when cast(bi_update_date as date) >= date_trunc(current_date(), year) then 2
+      end
+      else 1 end)
+      when {{actual_rebate_period._parameter_value}} = 2
+      and extract(year from cast(bi_update_date as date)) = extract(year from current_date()-1)
+      and cast(bi_update_date as date) >= cast({{rebate_tracking_start._parameter_value}}  as date)
+      -- and cast(bi_update_date as date) <= tracking_end_end_last_month
+      THEN
+      (case when Scheme_Fixed = 'Y' and one__off = 'N' then
+      case when bi_update_date is null or cast(bi_update_date as date) < date_trunc(current_date(), year) then 0
+      when Rebate_ID is null and cast(bi_update_date as date) >= date_trunc(current_date(), year) then 0
+      when cast(bi_update_date as date) >= date_trunc(current_date(), year) then 2
+      end else 1 end)
+      else 0 end as DEMO,
+
+      case when frequency = 'Pending' or Hospital_level_condition = 'Y' then rebate_fixed_amount_qty_converted_8b/12*greatest(0, date_diff(least(cast(contract_end_extended as date), least(end_last_year, tracking_end_end_last_month) ), greatest( actual_rebate_until_fillna, date_add(cast({{rebate_tracking_start._parameter_value}} as date), interval -1 day)  ), MONTH )) else 0 end as outstanding_rebate_fixed_valid_prev_year,
+
+      case when frequency  <> 'Pending' or Hospital_level_condition = 'Y' then rebate_fixed_amount_qty_converted_8b/12*greatest(0, date_diff(case when one__off = 'N' then tracking_end_end_last_month
+      when one__off = 'Y' then least( cast(contract_end as date), tracking_end_end_last_month ) end,
+      greatest(date_trunc(current_date()-1, year)  , greatest(actual_rebate_until_fillna, date_add(cast({{rebate_tracking_start._parameter_value}} as date), interval -1 day))), MONTH)) end as outstanding_rebate_fixed_valid_current_year,
+      case when cast(bi_update_date as date) >= cast({{discount_start._parameter_value}} as date) and cast(bi_update_date as date) <= cast({{discount_end._parameter_value}} as date) and match_type in ('Original','Fixed Scheme') then
+      case when scheme_fixed = 'Y' and one__off = 'N' and rebate_fixed_amount_qty_converted_8b < actual_rebate_per_contract_per_month then -coalesce(rebate_fixed_amount_qty_converted_8b,0)
+      when rebate_id = '20230803_2' then -coalesce(rebate_fixed_amount_qty_converted_8b,0)
+      else -coalesce(actual_rebate_per_contract_per_month,0)
+      end
+      when rebate_id = '20230215_1' then -700000 else 0 end as recover_rebate_for,
+      sum(case when {% condition match_type_f %} match_type {% endcondition %}
+      -- and {% condition over_time_filter_F %} over_time_F {% endcondition %}
+      then actual_rebate_per_contract_per_month
+      end)
+      over(partition by left(cast(bi_update_date as string), 7)) as month_actual_rebate_per_contract_per_month_total,
+      CASE
+      WHEN last_record_per_selected_customer_sku_all_products_table = 'Last Record'
+      THEN NHIprice_per_pill *
+      (CASE
+      WHEN NHIItemName IS NULL OR NHIItemName = '' OR NHIItemName = ' '
+      THEN 1
+      ELSE CAST(NHIItemName AS INT64)
+      END)
+      ELSE 0
+      END AS NHIprice_per_box,
+      case when last_record_per_selected_customer_sku_all_products_table = "Last Record" then UnrestrictedStock else 0 end
+       AS inventory_level,
+
+      NHIprice_per_pill *
+      (CASE
+      WHEN NHIItemName IS NULL OR NHIItemName = '' OR NHIItemName = ' '
+      THEN 1
+      ELSE CAST(NHIItemName AS INT64)
+      END) AS NHIprice_per_box_no_condition,
+
+      row_number() over(partition by left(cast(bi_update_date as string), 7) order by bi_update_date asc) as rank_actual_rebate_per_contract_per_month_total,
+      case when cast(bi_update_date as date) >= start_of_current_year and cast(bi_update_date as date)<= current_date()-1 and match_type in ('Original','Fixed Scheme') then -coalesce(actual_rebate_per_contract_per_month,0) else 0 end as recover_rebate_for_ytd
+      from
+
+      -- LEVEL 4
+      (select *,
+      CASE WHEN {% condition set_contract_customer_f %} for_contract_customer {% endcondition %}
+      AND customer_clean_dim IS NOT NULL
+      AND customer_clean_dim != ''
+      AND customer_clean_dim != ' '
+      THEN customer_clean_dim
+      ELSE "Outside Rebate For Range [DO NOT SELECT]"
+      END AS rebate_to_customer,
+
+      CASE
+      WHEN Serial_Number = MAX(CASE
+      WHEN {% condition set_contract_customer_f %} for_contract_customer {% endcondition %}
+      THEN Serial_Number END)
+      OVER (PARTITION BY for_contract_customer, SKUCode_BI)
+      AND Serial_number != 1
+      THEN 'Last Record'
+      END AS last_record_per_selected_customer_sku_all_products_table,
+
+      CASE WHEN COUNT(DISTINCT CASE WHEN {% condition set_contract_customer_f %} for_contract_customer {% endcondition %}
+      THEN contract END)
+      OVER () > 1
+      THEN '>1 Contract selected: Untick [DO NOT SELECT] option in filters'
+      WHEN start_date_dim > end_date_dim
+      THEN 'Rebate planning period outside contract period: Adjust planning period OR update rebate data'
+      WHEN frequency = 'Yearly' AND DATE_DIFF(end_date_dim, start_date_dim, day) < 364
+      THEN 'Planning period shorter than ' || frequency || ' frequency: Adjust Start Date/End Date'
+      WHEN frequency = 'Half Yearly' AND DATE_DIFF(end_date_dim, start_date_dim, day) < 180
+      THEN 'Planning period shorter than ' || frequency || ' frequency: Adjust Start Date/End Date'
+      WHEN frequency = 'Quarterly' AND DATE_DIFF(end_date_dim, start_date_dim, day) < 88
+      THEN 'Planning period shorter than ' || frequency || ' frequency: Adjust Start Date/End Date'
+      ELSE ''
+      END AS rebate_planning_alert_1,
+
+      COUNT(DISTINCT
+      CASE WHEN {% condition set_contract_customer_f %} for_contract_customer {% endcondition %}
+      AND match_type in ('Original', 'Fixed Scheme')
+      AND rebate_for_filter_planning_period_dim = 'True'
+      THEN CONCAT(Rebate_Description, cast(contract_start as string))
+      END)
+      OVER(PARTITION BY for_contract_customer, SKUCode_BI) AS no_of_schemes_rebate_for_sku,
+      COALESCE(cumulated_rebate_invoice_by_perc_valid_planning_period ,0) AS outstanding_rebate_by_perc_planning_period,
+      case when first_record_per_contract_per_month = 'First Record' then
+      case when Rebate_ID IN ('20230213_3', '20230425_3', '20230803_2') then cast(Rebate_Fixed_Amount as float64)
+      else  coalesce(cast(rebate_amt_exc_vat as float64)*1.05,0) end
+      else 0 end as actual_rebate_per_contract_per_month_aggregation_issue_2023,
+      case when first_record_per_contract_per_month = 'First Record' then coalesce(cast(rebate_amt_exc_vat as float64)*1.05,0) else 0 end as actual_rebate_per_contract_per_month,
+
+      safe_divide(ytg_rebate_by_perc_tracking_end_part1,3)
+      *safe_divide((sum(ytg_rebate_by_perc_tracking_end_part3) over(partition by scheme_no, customer_clean_dim)),(sum(1) over(partition by scheme_no, customer_clean_dim)) ) as ytg_rebate_by_perc_tracking_end,
+
+      safe_divide(ytg_rebate_by_perc_tracking_end_part1,3) as ytg_rebate_by_perc_tracking_end_1,
+
+      (sum(ytg_rebate_by_perc_tracking_end_part3) over(partition by scheme_no, concat(customercode_bi, " ", customer_name_bi))) as ytg_rebate_by_perc_tracking_end_2,
+
+      safe_divide(rebate_fixed_amount_qty_converted_8b, 12)*greatest(0, coalesce(date_diff( ytg_rebate_by_perc_tracking_end_part2, greatest(tracking_end_end_last_month, actual_rebate_until_fillna), month),0)) as ytg_rebate_fixed_tracking_end,
+      greatest(0, coalesce(date_diff(greatest(tracking_end_end_last_month, actual_rebate_until_fillna), ytg_rebate_by_perc_tracking_end_part2, month),0)) as demo_ytg_rebate_fixed_tracking_end,
+      (sum(case when scheme_by_perc = 'Y' then cumulated_rebate_by_perc_3_months_b4_end_last_month else 0 end ) over (partition by scheme_no, customercode_bi, contract_start)) / 3 * month_to_accure + coalesce(rebate_fixed_amount_qty_converted_8b,0)/12*month_to_accure as accrued_rebate_5
+
+      -- LEVEL 3
+      from
+      (select *,
+      CASE WHEN {% condition for_contract_f %} for_contract_for_set_filter {% endcondition %} then customer_clean_dim
+      ELSE " [DO NOT SELECT] Outside selected Contract"
+      END AS for_contract_customer,
+      CASE WHEN date_dim >= start_date_dim
+      AND date_dim <= end_date_dim
+      THEN Cumulated_rebate_invoice_by_perc
+      END AS cumulated_rebate_by_perc_valid_planning_period_dim,
+      CASE WHEN CAST(contract_start AS DATE) <= CAST( {{rebate_planning_end._parameter_value}} AS DATE)
+      AND CAST(contract_end_extended AS DATE) >= CAST( {{rebate_planning_start._parameter_value}} AS DATE)
+      AND ( date_dim >= start_date_dim
+      AND date_dim <= end_date_dim
+      or match_type = "Fixed Scheme"
+      )
+      THEN "Keep"
+      ELSE "Exclude"
+      END AS filter_selected_period_outstanding,
+      CASE WHEN scheme_fixed = 'Y'
+      THEN CASE WHEN one_off = 'N'
+      AND CAST( bi_update_date AS DATE) >= DATE_TRUNC(CURRENT_DATE(), YEAR)
+      AND Rebate_ID IS NOT NULL
+      AND Rebate_ID != ''
+      THEN 0
+      WHEN one_off = 'N'
+      AND CAST( bi_update_date AS DATE) < DATE_TRUNC(CURRENT_DATE(), YEAR)
+      THEN rebate_fixed_amount_qty_converted_8b
+      WHEN one_off = 'N'
+      AND ( Rebate_ID IS NULL OR Rebate_ID = '' )
+      AND CAST( bi_update_date AS DATE) >= DATE_TRUNC(CURRENT_DATE(), YEAR)
+      THEN rebate_fixed_amount_qty_converted_8b
+      WHEN one_off = 'Y'
+      AND cast(actual_rebate_until_fillna as date)  < cast(contract_end as date)
+      THEN rebate_fixed_amount_qty_converted_8b - actual_rebate_org_pdg_fixed_up_to_date_dim
+      END
+      END AS outstanding_rebate_fixed_planning_period_dim,
+
+      CASE
+      WHEN date_dim >= start_date_dim
+      AND date_dim <= end_date_dim
+      THEN cumulated_rebate_invoice_by_perc
+      END AS cumulated_rebate_invoice_by_perc_valid_planning_period,
+
+      case when match_type <> 'Unmatch Trans' and cast(serial_number as int64) = min_serial_number_partition then 'First Record' end as first_record_per_contract_per_month,
+      sum(case when frequency <> 'Pending' then cumulated_rebate_by_perc_3_months_b4_tracking_end else 0 end) over(partition by scheme_no, concat(customercode_bi, " ", customer_name_bi)) as ytg_rebate_by_perc_tracking_end_part1,
+      greatest(0, date_diff(ytg_rebate_by_perc_tracking_end_part2, tracking_end_end_last_month, month) )as ytg_rebate_by_perc_tracking_end_part3,
+      case when (one__off = 'N' or (one__off = 'Y' and extract(month from cast(contract_end as date)) = 12 and  extract(year from cast(contract_end as date) ) >= extract(year from current_date()-1 )  )) and first_record_per_contract = 'First Record' then
+      case when frequency = 'Yearly' then 12- MOD(cast(extract(month from actual_rebate_until_fillna) as int64),12)
+      when frequency = 'Half Yearly' then 6 - MOD(cast(extract(month from actual_rebate_until_fillna) as int64),6)
+      when frequency = 'Quarterly' then 3 - MOD(cast(extract(month from actual_rebate_until_fillna) as int64),3)
+      when frequency = 'Monthly' then 1
+      when Rebate_execution_plan_clean is null then 12- MOD(cast(extract(month from cast(contract_end as date)) as int64),12)
+      else 0 end
+      else 0 end as month_to_accure
+      FROM
+
+      -- LEVEL 2
+      (select *,
+      CASE WHEN scheme_fixed = 'Y'
+      AND EXTRACT( YEAR FROM bi_update_date ) = EXTRACT( YEAR FROM CURRENT_DATE() )
+      THEN COALESCE( rebate_amt_exc_vat , 0 ) * 1.5
+      ELSE 0
+      END as actual_rebate_org_pdg_fixed_up_to_date_dim,
+      CASE WHEN {% condition iris_user_filter_f %} ris_territory {% endcondition %} THEN contract_group_filter
+      ELSE 'Products w/o Rebate [DO NOT SELECT]'
+      END AS for_contract_for_set_filter,
+      CAST(
+      CASE WHEN scheme_fixed = 'Y' THEN CAST( {{rebate_planning_start._parameter_value}} AS DATE)
+      ELSE min_date END
+      AS DATE) as start_date_dim,
+      CAST(
+      CASE WHEN scheme_fixed = 'Y' THEN CAST( {{rebate_planning_end._parameter_value}} AS DATE)
+      ELSE max_date END
+      AS DATE) as end_date_dim,
+      CASE WHEN dm_products_dim = 'DM' then "DM"
+      WHEN SKUCode_BI = '' AND Rebate_Description LIKE '%DM%' then "DM"
+      WHEN SKUCode_BI = '' then "HP"
+      ELSE "Non-DM"
+      END AS rebate_for_category,
+      min(cast(serial_number as int64)) over(partition by scheme_no, customercode_bi, SKUCode_BI, year_month, Match_Type) as min_serial_number_partition,
+      case when cast(serial_number as int64) = min_serial_number_partition_2 then 'First Record' end as first_record_per_contract,
+      case when date_clean >= greatest( cast({{rebate_tracking_start._parameter_value}} as date), cast(contract_start as date) ) and date_clean <= least(tracking_end_end_last_month, cast(contract_end_extended as date))
+      and (actual_rebate_until_raw_date is null or actual_rebate_until_raw_date < date_clean) then coalesce(Cumulated_rebate_invoice_by_perc,0) else 0 end as cumulated_rebate_by_perc_valid_tracking_period,
+
+      case
+      when actual_rebate_until_clean is null
+      then date_add(cast(contract_start as date), interval -1 day)
+      else actual_rebate_until_clean
+      end as actual_rebate_until_fillna,
+
+      case when date_clean > three_month_b4_end_last_month and date_clean <= end_last_month then cumulated_rebate_invoice_by_perc else 0 end as cumulated_rebate_by_perc_3_months_b4_end_last_month,
+
+      case when one__off = 'N' then date(cast(extract(year from current_date()-1) as int64),12,31)
+      when one__off = 'Y' then least(cast(contract_end as date), date(cast(extract(year from current_date()-1) as int64), 12,31)) end as ytg_rebate_by_perc_tracking_end_part2,
+      date(cast(extract(year from current_date()-1) as int64),12,31) as ytg_rebate_by_perc_tracking_end_part2_demo_1,
+      least(cast(contract_end as date), date(cast(extract(year from current_date()-1) as int64), 12,31)) as ytg_rebate_by_perc_tracking_end_part2_demo_2,
+      case when date_diff(current_date(), actual_rebate_until_clean, day) >=120 then "Alert: >120 days from last rebate"
+      when actual_rebate_until_clean is null and date_diff(current_date(), cast(contract_start as date), day) >=120 then "Alert: >120 days from last rebate"
+      when date_diff(current_date(), actual_rebate_until_clean, day) >=90 then "Alert: >90 days from last rebate"
+      when actual_rebate_until_clean is null and date_diff(current_date(), cast(contract_start as date), day) >=90 then "Alert: >90 days from last rebate"
+      else "Normal" end as alert_actual_rebate_until,
+
+      case when date_clean > three_month_b4_tracking_end
+      and date_clean<= tracking_end_end_last_month
+      then cumulated_rebate_invoice_by_perc end as cumulated_rebate_by_perc_3_months_b4_tracking_end,
+
+      case when date_clean > three_month_b4_end_last_month and date_clean <= end_last_month and (orderreasoncode <> '017' or salestype <> 'ZPOR') then cast(qty_transaction_invoice as float64) else 0 end as qty_transaction_exc_fg_3_months_b4_end_last_month,
+      case when date_clean > end_last_month and (orderreasoncode <> '017' or salestype <> 'ZPOR') then cast(qty_transaction_invoice as float64) else 0 end as qty_transaction_exc_fg_greater_end_last_month,
+      case when selected_total_list = 'Y' and date_clean > end_last_month and (orderreasoncode <> '017' or salestype <> 'ZPOR') then cast(qty_transaction_invoice as float64) else 0 end as qty_transaction_exc_fg_greater_end_last_month_selected,
+      coalesce(actual_rebate_rebate_pdt_ytd,0) as recover_rebate_to_ytd,
+      case when selected_total_list = 'Y' then coalesce(value_nhiprice_invoice_ytd,0) else 0 end as value_nhiprice_invoice_ytd_selected_total,
+      CASE
+      WHEN year_month >= DATE_ADD(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL -6 MONTH) THEN 'Current'
+      WHEN year_month >= DATE_ADD(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL -12 MONTH) THEN 'Previous'
+      ELSE NULL
+      END as period_current_previous,
+      SUM(rebate_amt_limit) OVER(PARTITION BY pg_clean_dim, sku_dim) as sum_rebate_amt_limit_dim,
+
+
+      from
+
+      (select *,
+      date_add(tracking_end_end_last_month, interval -3 month) as three_month_b4_tracking_end,
+      from
+
+      -- LEVEL 1
+      (select *,
+      MIN(CASE WHEN rebate_for_filter_planning_period_dim = 'True'
+      AND ( actual_rebate_until_raw_date_dim IS NULL
+      OR actual_rebate_until_raw_date_dim < date_dim )
+      AND date_dim >= CAST( {{rebate_planning_start._parameter_value}} AS DATE)
+      THEN date_dim
+      END)
+      OVER( PARTITION BY CustomerCode_BI, scheme_no ) as min_date,
+      MAX(CASE WHEN rebate_for_filter_planning_period_dim = 'True'
+      AND ( actual_rebate_until_raw_date_dim IS NULL
+      OR actual_rebate_until_raw_date_dim < date_dim )
+      AND date_dim <= CAST( {{rebate_planning_end._parameter_value}} AS DATE)
+      THEN date_dim
+      END)
+      OVER( PARTITION BY CustomerCode_BI, scheme_no ) as max_date,
+      SUM(
+      CASE WHEN date_dim >= CAST( {{cd_custom_start._parameter_value}} AS DATE)
+      AND date_dim <= CAST( {{cd_custom_end._parameter_value}} AS DATE)
+      AND selected_total_list = 'Y'
+      THEN Value_Transaction_invoice
+      END
+      -
+      CASE WHEN CAST( {{cd_custom_end._parameter_value}} AS DATE) = current_date()-1
+      AND match_type = 'For Approval'
+      AND selected_total_list = 'Y'
+      THEN COALESCE(rebate_amt_exc_vat, 0)
+      ELSE 0
+      END)
+      OVER(PARTITION BY SKUCode_BI) AS sum_numerator_cd_percent_selected_total,
+      SUM(
+      CASE WHEN date_dim >= CAST( {{cd_custom_start._parameter_value}} AS DATE)
+      AND date_dim <= CAST( {{cd_custom_end._parameter_value}} AS DATE)
+      AND selected_total_list = 'Y'
+      THEN Value_NHIprice_corrected_invoice_adjusted / 1.05
+      END)
+      OVER(PARTITION BY SKUCode_BI) AS sum_deminator_cd_percent_selected_total,
+      SUM(
+      CASE WHEN date_dim >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY), YEAR)
+      AND date_dim <= CURRENT_DATE()
+      THEN COALESCE(value_transaction_invoice, 0) * 1.05
+      ELSE 0
+      END
+      -
+      CASE WHEN match_type = 'For Approval'
+      THEN COALESCE(rebate_amt_exc_vat ,0) * 1.05
+      ELSE 0
+      END)
+      OVER( PARTITION BY CustomerCode_BI, SKUCode_BI ) as rebate_amt_limit,
+      CASE WHEN pg_clean_dim IN ('JD','JM','GB')
+      THEN "DM"
+      ELSE "Non-DM"
+      END as dm_products_dim,
+      SUM(
+      CASE WHEN EXTRACT(YEAR FROM date_dim) = EXTRACT(YEAR FROM CURRENT_DATE()-1)
+      OR EXTRACT(YEAR FROM date_dim) + 1 = EXTRACT(YEAR FROM CURRENT_DATE()-1)
+      THEN Value_Transaction_invoice
+      ELSE 0
+      END)
+      OVER(PARTITION BY SKUCode_BI, CustomerCode_BI) AS cust_sku_sales_from_last_year,
+      CASE WHEN contract_clean_dim = ' '
+      OR contract_clean_dim IS NULL
+      OR contract_clean_dim = ''
+      THEN CONCAT( 'HP:', customer_clean_dim)
+      ELSE contract_clean_dim
+      END AS contract_group_filter,
+      CASE WHEN date_dim >= CAST( {{rebate_planning_start._parameter_value}} AS DATE)
+      AND date_dim <= CAST( {{rebate_planning_end._parameter_value}} AS DATE)
+      AND ( OrderReasonCode != '017'
+      OR SalesType != 'ZPOR' )
+      THEN Value_NHIprice_corrected_invoice_adjusted
+      ELSE 0
+      END AS Value_NHIprice_invoice_selected_planning_period,
+      -- Year Month
+      case when {{date_selection._parameter_value}} = 1 then yearmonth_billing_date
+      when {{date_selection._parameter_value}} = 2 then yearmonth_orderdate
+      end as year_month,
+
+      case when date_add(date_trunc(cast({{rebate_tracking_end._parameter_value}} as date), month), interval 1 month) = date_add(cast({{rebate_tracking_end._parameter_value}} as date), interval 1 day) then cast({{rebate_tracking_end._parameter_value}} as date)
+      else date_add(date_trunc(cast({{rebate_tracking_end._parameter_value}} as date), month), interval -1 day) end as tracking_end_end_last_month,
+
+      max(actual_rebate_until_raw_date) over(partition by scheme_no, customercode_bi, Rebate_Description) as actual_rebate_until_clean,
+
+      date_add(end_last_month, interval -3 month) as three_month_b4_end_last_month,
+
+      min(cast(serial_number as int64)) over(partition by scheme_no, customercode_bi) as min_serial_number_partition_2,
+      case when date_clean >= cast( {{discount_start._parameter_value}} as date) and date_clean <= cast({{discount_end._parameter_value}} as date) then cast(value_transaction_invoice as float64)*1.05
+      -- else 0
+      end as net_sales_invoice_disc_period,
+      case when date_clean >= cast( {{discount_start._parameter_value}} as date) and date_clean <= cast({{discount_end._parameter_value}} as date) then Value_NHIprice_corrected_invoice_adjusted else 0 end as value_nhiprice_invoice_selected_disc_period,
+      coalesce(actual_rebate_rebate_pdt_disc_period_v2,0) as recover_rebate_to,
+      case when date_clean >= start_of_current_year and date_clean <= current_date()-1 then cast(value_transaction_invoice as float64)*1.05 else 0 end as net_sales_invoice_ytd,
+      case when cast(bi_update_date as date) >= start_of_current_year and cast(bi_update_date as date) <= current_date()-1 and match_type in ('Matched Rebate','Approved Rebate') then cast(rebate_amt_exc_vat as float64)*1.05 else 0 end as actual_rebate_rebate_pdt_ytd,
+      case when date_clean >= start_of_current_year and date_clean<=current_date()-1 then value_nhiprice_corrected_invoice_adjusted else 0 end as value_nhiprice_invoice_ytd,
+      case when date_clean >= cast( {{discount_start._parameter_value}} as date) and date_clean <= cast({{discount_end._parameter_value}} as date) then cast(qty_transaction_invoice as float64) else 0 end as qty_transaction_disc_period,
+
+      rank() over (partition by coalesce(concat(contract, ' ', contract_group_name), concat(customercode_bi, ' ', customer_name_bi)), (case when skucode_bi is null or length(skucode_bi) = 0 then 'Hospital Level'
+      else concat(skucode_bi, ' ', case when skudescription_bi is null then '' else skudescription_bi end) end) order by max_contract_start desc ) as rank_max_contract_start
+      FROM
+
+      -- LEVEL 0
+      (SELECT *,
+      CASE WHEN {{date_selection._parameter_value}} = 1
+      THEN CAST(actual_rebate_until AS DATE)
+      WHEN {{date_selection._parameter_value}} = 2
+      THEN CAST(actual_rebate_until_orderdate AS DATE)
+      END as actual_rebate_until_raw_date_dim,
+      CASE WHEN {{date_selection._parameter_value}} = 1
+      THEN SAFE_CAST( CONCAT(
+      LEFT(billingdate, 4), '-',
+      SUBSTRING(billingdate, 5, 2), '-',
+      RIGHT(billingdate, 2)
+      ) as date)
+      WHEN {{date_selection._parameter_value}} = 2
+      THEN SAFE_CAST( CONCAT(
+      LEFT(orderdate, 4), '-',
+      SUBSTRING(orderdate, 5, 2), '-',
+      RIGHT(orderdate, 2)
+      ) as date)
+      END as date_dim,
+
+      case
+      when skucode_bi = '168202'
+      then case when CAST(CASE WHEN {{date_selection._parameter_value}} = 1
+      THEN SAFE_CAST( CONCAT(
+      LEFT(billingdate, 4), '-',
+      SUBSTRING(billingdate, 5, 2), '-',
+      RIGHT(billingdate, 2)
+      ) as date)
+      WHEN {{date_selection._parameter_value}} = 2
+      THEN SAFE_CAST( CONCAT(
+      LEFT(orderdate, 4), '-',
+      SUBSTRING(orderdate, 5, 2), '-',
+      RIGHT(orderdate, 2)
+      ) as date)
+      END as date) < DATE('2024-07-01')
+      then cast(ListValue_invoice as float64)
+      else cast(Value_NHIprice_corrected_invoice as float64)
+      end
+      else cast(Value_NHIprice_corrected_invoice as float64)
+      end as Value_NHIprice_corrected_invoice_adjusted,
+
+      CASE WHEN SKUCode_BI IS NULL OR SKUCode_BI = ''
+      THEN 'Hospital Level'
+      ELSE CONCAT(SKUCode_BI, ' ', COALESCE(SKUDescription_BI, ''))
+      END AS sku_dim,
+      CONCAT( Contract, ' ', Contract_Group_Name) AS contract_clean_dim,
+      if(customer_name_bi in ('',' '),null,CONCAT( CustomerCode_BI, ' ', Customer_Name_BI)) AS customer_clean_dim,
+      CONCAT(
+      CAST(EXTRACT(YEAR FROM contract_start) AS STRING), '/',
+      CAST(EXTRACT(MONTH FROM contract_start) AS STRING), '/',
+      CAST(EXTRACT(DAY FROM contract_start) AS STRING)
+      ) AS contract_start_string,
+      case when extract(year from bi_update_date) >= extract(year from current_date())-1
+      then "yes"
+      else "no"
+      end as over_time_F,
+      CASE WHEN CAST(contract_start AS DATE) <= CAST( {{rebate_planning_end._parameter_value}} AS DATE)
+      AND CAST(contract_end_extended AS DATE) >= CAST( {{rebate_planning_start._parameter_value}} AS DATE)
+      AND ( zp_notes != 'only for show' OR zp_notes IS NULL OR zp_notes = '' )
+      AND ( frequency != 'Pending' OR frequency IS NULL OR frequency = '' )
+      THEN 'True'
+      ELSE 'False'
+      END AS rebate_for_filter_planning_period_dim,
+
+      CASE WHEN {{sku_sku_group._parameter_value}} = 'sku'
+      THEN CASE WHEN (pg IS NOT NULL AND pg != '') THEN pg
+      WHEN skucode_bi = '303572' THEN 'TW'
+      WHEN hospital_level_condition ='Y' then 'HP'
+      END
+      WHEN {{sku_sku_group._parameter_value}} = 'skugrp'
+      THEN CASE WHEN pg IN ('MI','TW') THEN 'MI/TW'
+      WHEN (pg IS NOT NULL AND pg != '') THEN pg
+      WHEN skucode_bi= '303572' THEN 'TW'
+      WHEN hospital_level_condition ='Y' then 'HP'
+      END
+      END as pg_clean_dim,
+
+      COALESCE(CONCAT(SKUCode_BI, ' ', SKUDescription_BI), 'Hospital Level') as rebate_to_sku,
+      CASE
+      WHEN orderdate IS NOT NULL AND orderdate != ''
+      THEN date_trunc(PARSE_DATE('%Y%m%d', orderdate), month)
+      ELSE NULL END as yearmonth_orderdate,
+      date(safe_cast(left(yearmonth, 4) as int64), safe_cast(right(yearmonth, 2) as int64), 1) as yearmonth_billing_date,
+      case when rebate_fixed_amount is null then cast(rebate_fixed_qty as float64) * cast(Rebate_PG_1_Selling_Price as float64) else cast(rebate_fixed_amount as float64) end as rebate_fixed_amount_qty_converted_8b,
+      case when one_off is null or length(one_off) = 0 and match_type in ('Fixed Scheme','Original') then 'N' else one_off end as one__off,
+      case when {{date_selection._parameter_value}} = 1 then cast(actual_rebate_until as date )
+      when {{date_selection._parameter_value}} = 2 then cast(actual_rebate_until_orderdate as date) end as actual_rebate_until_raw_date ,
+      case when {{date_selection._parameter_value}} = 1 then (case when length(billingdate)>0 then PARSE_DATE('%Y%m%d', billingdate) else null end)
+      when {{date_selection._parameter_value}} = 2 then (case when length(orderdate)>0 then PARSE_DATE('%Y%m%d', orderdate) else null end)
+      end as date_clean,
+      case when match_type = 'Original' then coalesce(safe_cast(rebate_value_percentage_corrected_invoice as float64),0) + coalesce(safe_cast(Rebate_Value_per_pill_invoice as float64),0) else 0 end as Cumulated_rebate_invoice_by_perc,
+      date_add(date_trunc(current_date()-1, year), interval -1 day) as end_last_year,
+
+      date_add(date_trunc(current_date(), month), interval -1 day) as end_last_month,
+
+      case when length(rebate_execution_plan)>0 then concat(safe_CAST(LEFT(Rebate_execution_plan, 4) AS string) ,"-",   -- Extract the left 4 characters and cast to INT64 for the year
+      safe_CAST(SUBSTRING(Rebate_execution_plan, 5, 2) AS string) ,"-", -- Extract the characters 5 and 6 for the month
+      safe_CAST(RIGHT(Rebate_execution_plan, 2) AS string) ) else null end as rebate_execution_plan_clean,
+      case when cast(bi_update_date as date) >= cast({{discount_start._parameter_value}} as date) and cast(bi_update_date as date) <= cast({{discount_end._parameter_value}} as date) and match_type IN ('Matched Rebate','Approved Rebate') then safe_cast(rebate_amt_exc_vat as float64)*1.05 else 0 end as  actual_rebate_rebate_pdt_disc_period_v2,
+      date_trunc(current_date()-1, year) as start_of_current_year,
+      max(cast(contract_start as date)) over (partition by coalesce(concat(contract, ' ', contract_group_name), concat(customercode_bi, ' ', customer_name_bi)),concat(customercode_bi, ' ', customer_name_bi), case when skucode_bi is null or length(skucode_bi) = 0 then 'Hospital Level'
+      else concat(skucode_bi, ' ', case when skudescription_bi is null then '' else skudescription_bi end) end ) as max_contract_start
+      FROM  `zp-dev-looker-analytics.infrared.zanalytics-TW_BI_REBATE_CONSOLIDATE_V3`
+      --where left(billingdate,6) = '202410'
+      -- WHERE bi_update_date BETWEEN '2024-01-01' and '2025-02-20'
+
+      )))))))))
+
+      ;;
+  }
+  dimension: rebate_amt {
+    type: number
+    sql: CASE
+          WHEN 1=1 AND {{fg_cd_1._parameter_value}} = 'FG' THEN {{selling_price_1._parameter_value}} * {{rebate_product_1_qty._parameter_value}} end ;;
+  }
+  measure: rebate_amt_total {
+    type: sum
+    label: " "
+    sql: ${rebate_amt} ;;
+  }
+  measure: rebate_amt_dm_total {
+    type: number
+    label: " "
+    sql: sum(${rebate_amt}) over (partition by ${rebate_to_category}) ;;
+  }
+  dimension: three_month_b4_end_last_month {
+    type: string
+    sql: ${TABLE}.three_month_b4_end_last_month ;;
+  }
+  dimension: grand_total_text {
+    type: string
+    label: " "
+    sql: "Grand Total" ;;
+  }
+  dimension: customer_clean_dim {
+    type: string
+    sql: ${TABLE}.customer_clean_dim ;;
+  }
+  dimension: test {
+    type: number
+    sql: ${TABLE}.test ;;
+  }
+  dimension: test2 {
+    type: number
+    sql: ${TABLE}.test2 ;;
+  }
+  dimension: mau_so {
+    type: number
+    sql: ${TABLE}.mau_so ;;
+  }
+  dimension: mau_so_final {
+    type: number
+    sql: ${TABLE}.mau_so_final ;;
+  }
+  parameter: sku_sku_group {
+    label: "SKU/SKU Grouped"
+    type: string
+    allowed_value: {
+      value: "sku"
+      label: "SKU"
+    }
+    allowed_value: {
+      value: "skugrp"
+      label: "SKU Grouped"
+    }
+    default_value: "skugrp"
+  }
+
+  parameter: Sort_By {
+    type: string
+    allowed_value: {
+      value: "Actual Rebate Until"
+      label: "Actual Rebate Until"
+    }
+    allowed_value: {
+      value: "Outstanding Rebate"
+      label: "Outstanding Rebate"
+    }
+    allowed_value: {
+      value: "Outstanding + YTG Rebate"
+      label: "Outstanding + YTG Rebate"
+    }
+    default_value: "Actual Rebate Until"
+  }
+
+
+  parameter: discount_start {
+    type: date_time
+    default_value: "2024-01-01"
+  }
+  parameter: discount_end {
+    type: date_time
+    default_value: "2024-02-18"
+  }
+
+  parameter: bi_selected_total {
+    type: number
+    allowed_value: {
+      value: "1"
+      label: "BI Total"
+    }
+    allowed_value: {
+      value: "2"
+      label: "Selected Total"
+    }
+    default_value: "1"
+  }
+
+  # FILTERS - SET
+  filter: iris_user_filter_f {
+    label: "IRIS User Filter"
+    type: string
+    suggest_dimension: ris_territory
+  }
+  filter: for_contract_f {
+    type: string
+    suggest_dimension: for_contract_for_set_filter
+  }
+  dimension: for_contract_for_set_filter {
+    type: string
+    sql: ${TABLE}.for_contract_for_set_filter ;;
+  }
+  filter: set_contract_customer_f {
+    type: string
+    suggest_dimension: for_contract_customer
+  }
+  dimension: for_contract_customer {
+    type: string
+    sql: ${TABLE}.for_contract_customer ;;
+  }
+  filter: customer_f {
+    type: string
+    suggest_dimension: rebate_to_customer
+  }
+  dimension: rebate_to_customer {
+    type: string
+    sql: ${TABLE}.rebate_to_customer ;;
+  }
+  filter: cust_sku_f {
+    type: string
+    suggest_dimension: rebate_to_customer_sku
+  }
+  dimension: rebate_to_customer_sku {
+    type: string
+    sql: ${TABLE}.rebate_to_customer_sku ;;
+  }
+  filter: sku_f {
+    type: string
+    suggest_dimension: rebate_for_sku_for_set
+  }
+  dimension: rebate_for_sku_for_set {
+    type: string
+    sql: ${TABLE}.rebate_for_sku_for_set ;;
+  }
+  dimension: rebate_planning_alert_1 {
+    type: string
+    sql: ${TABLE}.rebate_planning_alert_1 ;;
+  }
+
+
+  # FG Rebate Qty
+  dimension: fg_rebate_qty {
+    label: "FG Rebate Qty"
+    type: number
+    sql: CASE
+          WHEN 1=1 AND {{fg_cd_1._parameter_value}} = 'FG' THEN {{rebate_product_1_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_2._parameter_value}} = 'FG' THEN {{rebate_product_2_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_3._parameter_value}} = 'FG' THEN {{rebate_product_3_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_4._parameter_value}} = 'FG' THEN {{rebate_product_4_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_5._parameter_value}} = 'FG' THEN {{rebate_product_5_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_6._parameter_value}} = 'FG' THEN {{rebate_product_6_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_7._parameter_value}} = 'FG' THEN {{rebate_product_7_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_8._parameter_value}} = 'FG' THEN {{rebate_product_8_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_9._parameter_value}} = 'FG' THEN {{rebate_product_9_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_10._parameter_value}} = 'FG' THEN {{rebate_product_10_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_11._parameter_value}} = 'FG' THEN {{rebate_product_11_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_12._parameter_value}} = 'FG' THEN {{rebate_product_12_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_13._parameter_value}} = 'FG' THEN {{rebate_product_13_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_14._parameter_value}} = 'FG' THEN {{rebate_product_14_qty._parameter_value}}
+          WHEN 1=1 AND {{fg_cd_15._parameter_value}} = 'FG' THEN {{rebate_product_15_qty._parameter_value}}
+        END ;;
+  }
+
+  measure: percent_of_total_fg_rebate_qty {
+    label: "% of total: FG Rebate Qty"
+    type: percent_of_total
+    sql: ${fg_rebate_qty} ;;
+    value_format: "0.0\%"
+  }
+  measure: sum_inventory_level {
+    type: max
+    sql: ${TABLE}.inventory_level ;;
+  }
+
+  measure: sum_NHIprice_per_box {
+    type: number
+    sql: SUM(DISTINCT ${TABLE}.NHIprice_per_box) ;;
+  }
+  measure: sum_NHIprice_per_box_no_condition {
+    type: sum
+    sql: ${TABLE}.NHIprice_per_box_no_condition ;;
+  }
+
+  # Monthly Qty Transaction (Past 6month)
+  measure: monthly_qty_transaction_past_6month {
+    type: number
+    sql: sum(case when ${TABLE}.period_current_previous = 'Current'
+                  then cast(${TABLE}.Qty_Transaction_invoice as float64)
+                  else 0
+              end)/6 ;;
+    value_format: "###,##0"
+  }
+  # Monthly Qty Transaction (Previous 6month)
+  measure: monthly_qty_transaction_previous_6month {
+    type: number
+    sql: sum(case when ${TABLE}.period_current_previous = 'Previous'
+                  then cast(${TABLE}.Qty_Transaction_invoice as float64)
+                  else 0
+              end)/6 ;;
+    value_format: "###,##0"
+  }
+  measure: growth_rolling_6_months {
+    type: number
+    sql: SAFE_DIVIDE( ${monthly_qty_transaction_past_6month} - ${monthly_qty_transaction_previous_6month},
+      ${monthly_qty_transaction_previous_6month} ) ;;
+    value_format_name: percent_0
+  }
+
+  dimension: DEMO {
+    type: number
+    sql: ${TABLE}.DEMO ;;
+  }
+  measure: sum_cumulated_rebate_by_perc_valid_tracking_period {
+    type: sum
+    sql: ${TABLE}.cumulated_rebate_by_perc_valid_tracking_period ;;
+  }
+  measure: sum_Cumulated_rebate_invoice_by_perc {
+    type: sum
+    sql: ${TABLE}.Cumulated_rebate_invoice_by_perc ;;
+  }
+  measure: sum_cumulated_rebate_invoice_by_perc_valid_planning_period {
+    type: sum
+    sql: ${TABLE}.cumulated_rebate_invoice_by_perc_valid_planning_period ;;
+  }
+
+  measure: sum_rebate_value_percentage_corrected_invoice {
+    type: sum
+    sql: ${TABLE}.rebate_value_percentage_corrected_invoice ;;
+  }
+  measure: sum_Rebate_Value_per_pill_invoice {
+    type: sum
+    sql: ${TABLE}.Rebate_Value_per_pill_invoice ;;
+  }
+
+
+  # FG/CD
+  parameter: fg_cd_1 {
+    type: string
+    label: "FG/CD 1"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_2 {
+    type: string
+    label: "FG/CD 2"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_3 {
+    type: string
+    label: "FG/CD 3"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_4 {
+    type: string
+    label: "FG/CD 4"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_5 {
+    type: string
+    label: "FG/CD 5"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_6 {
+    type: string
+    label: "FG/CD 6"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_7 {
+    type: string
+    label: "FG/CD 7"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_8 {
+    type: string
+    label: "FG/CD 8"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_9 {
+    type: string
+    label: "FG/CD 9"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_10 {
+    type: string
+    label: "FG/CD 10"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_11 {
+    type: string
+    label: "FG/CD 11"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_12 {
+    type: string
+    label: "FG/CD 12"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_13 {
+    type: string
+    label: "FG/CD 13"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_14 {
+    type: string
+    label: "FG/CD 14"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  parameter: fg_cd_15 {
+    type: string
+    label: "FG/CD 15"
+    allowed_value: {
+      label: "Free Goods"
+      value: "FG"
+    }
+    allowed_value: {
+      label: "Cash Discount"
+      value: "CD"
+    }
+    default_value: "CD"
+  }
+
+  # Rebate Product 1 Qty
+  parameter: rebate_product_1_qty {
+    type: number
+    label: "Rebate Product 1 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_2_qty {
+    type: number
+    label: "Rebate Product 2 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_3_qty {
+    type: number
+    label: "Rebate Product 3 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_4_qty {
+    type: number
+    label: "Rebate Product 4 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_5_qty {
+    type: number
+    label: "Rebate Product 5 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_6_qty {
+    type: number
+    label: "Rebate Product 6 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_7_qty {
+    type: number
+    label: "Rebate Product 7 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_8_qty {
+    type: number
+    label: "Rebate Product 8 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_9_qty {
+    type: number
+    label: "Rebate Product 9 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_10_qty {
+    type: number
+    label: "Rebate Product 10 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_11_qty {
+    type: number
+    label: "Rebate Product 11 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_12_qty {
+    type: number
+    label: "Rebate Product 12 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_13_qty {
+    type: number
+    label: "Rebate Product 13 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_14_qty {
+    type: number
+    label: "Rebate Product 14 Qty"
+    default_value: "-1"
+  }
+
+  parameter: rebate_product_15_qty {
+    type: number
+    label: "Rebate Product 15 Qty"
+    default_value: "-1"
+  }
+
+
+  parameter: include_completed_contracts_tracking {
+    type: string
+    allowed_value: {
+      label: "Include Completed Contracts"
+      value: "Include"
+    }
+    allowed_value: {
+      label: "Exclude Completed Contracts"
+      value: "Exclude"
+    }
+    default_value: "Include"
+  }
+  parameter: include_completed_contracts_disc {
+    type: string
+    allowed_value: {
+      label: "Include Completed Contracts"
+      value: "Include"
+    }
+    allowed_value: {
+      label: "Exclude Completed Contracts"
+      value: "Exclude"
+    }
+    default_value: "Include"
+  }
+  dimension: contract_exclude_filter_tracking_period {
+    type: string
+    sql: case when ${frequency} = 'Pending' then 'Exclude'
+          when {{include_completed_contracts_tracking._parameter_value}} = 'Exclude' and ${TABLE}.actual_rebate_until_clean = cast(${TABLE}.contract_end as date) then 'Exclude'
+          when {{include_completed_contracts_tracking._parameter_value}} = 'Include' then 'Include'
+          else 'Include' end
+          ;;
+  }
+  dimension: contract_exclude_filter_disc_period {
+    type: string
+    sql:
+    case when {{include_completed_contracts_disc._parameter_value}} = 'Exclude' and ${TABLE}.actual_rebate_until_clean = cast(${TABLE}.contract_end as date) then 'Exclude'
+          when {{include_completed_contracts_disc._parameter_value}} = 'Include' then 'Include'
+          else 'Include' end
+    ;;
+  }
+  dimension: filter_selected_period_outstanding {
+    type: string
+    label: "Filter - Selected Period Outstanding"
+    sql: ${TABLE}.filter_selected_period_outstanding ;;
+  }
+
+  parameter: rebate_tracking_start {
+    type: date_time
+    default_value: "2024-01-01"
+  }
+  parameter: rebate_tracking_end {
+    type: date_time
+    default_value: "2024-01-31"
+  }
+
+  # CD Custom Start
+  parameter: cd_custom_start {
+    type: date_time
+    default_value: "2025-01-01"
+  }
+  # CD Custom End
+  parameter: cd_custom_end {
+    type: date_time
+    default_value: "2025-02-25"
+  }
+
+  # Rebate Planning Start
+  parameter: rebate_planning_start {
+    type: date_time
+    default_value: "2024-01-01"
+  }
+  # Rebate Planning End
+  parameter: rebate_planning_end {
+    type: date_time
+    default_value: "2024-03-31"
+  }
+
+  # CD% Selected Total
+  measure: cd_percent_total {
+    label: "CD% Selected Total"
+    type: number
+    sql: 1 - SAFE_DIVIDE( MAX(${TABLE}.sum_numerator_cd_percent_selected_total) , MAX(${TABLE}.sum_deminator_cd_percent_selected_total) ) ;;
+    value_format_name: percent_1
+  }
+
+
+  # Recommended Rebate Amt (cust DM)
+  measure: recommended_rebae_amt_cust_dm {
+    label: "Recommended Rebate Amt (cust DM)"
+    type: number
+    sql: CASE WHEN SUM(${cust_rebate_amt_limit}) < SUM(${weighted_outstanding_rebate})
+              OR SUM(${dm_non_rebate_amt_limit}) < SUM(${outstanding_rebate_dm_non})
+              OR SUM(${cust_dm_non_rebate_amt_limit}) < SUM(${weighted_outstanding_rebate_cust_dm_non})
+              THEN SUM(${rebate_amt_limit})
+              ELSE SUM(${weighted_outstanding_rebate_cust_dm_non}) * ${rebate_amt_limit_percent_by_cust_dm_non}
+        END ;;
+  }
+  measure: recommended {
+    type: number
+    sql: SUM(${weighted_outstanding_rebate_cust_dm_non}) * ${rebate_amt_limit_percent_by_cust_dm_non} ;;
+  }
+  measure: recommended1 {
+    type: number
+    sql: SUM(${weighted_outstanding_rebate_cust_dm_non});;
+  }
+  measure: recommended2 {
+    type: number
+    sql: ${rebate_amt_limit_percent_by_cust_dm_non} ;;
+  }
+
+  # Weighted Outstanding Rebate (cust dm/non)
+  dimension: weighted_outstanding_rebate_cust_dm_non {
+    label: "Weighted Outstanding Rebate (cust dm/non)"
+    type: number
+    sql: ${outstanding_rebate_dm_non} * ${gross_sales_percent_by_customer} ;;
+  }
+  # Rebate Amt Limit
+  dimension: rebate_amt_limit {
+    label: "Rebate Amt Limit"
+    type: number
+    sql: ${TABLE}.rebate_amt_limit ;;
+  }
+  measure: sum_rebate_amt_limit {
+    type: sum
+    sql: ${rebate_amt_limit} ;;
+  }
+  dimension: sum_rebate_amt_limit_dim {
+    type: number
+    sql: ${TABLE}.sum_rebate_amt_limit_dim ;;
+  }
+
+  # cust DM/non rebate amt limit
+  dimension: cust_dm_non_rebate_amt_limit {
+    label: "cust DM/non rebate amt limit"
+    type: number
+    sql: ${TABLE}.cust_dm_non_rebate_amt_limit ;;
+  }
+  # Rebate Amt Limit % by Cust DM/Non
+  measure: rebate_amt_limit_percent_by_cust_dm_non {
+    label: "Rebate Amt Limit % by Cust DM/Non"
+    type: number
+    sql: SAFE_DIVIDE( SUM(${rebate_amt_limit}) , SUM(${rebate_amt_limit_percent_den}) )  ;;
+  }
+  # Rebate Amt Limit % den
+  dimension: rebate_amt_limit_percent_den {
+    type: number
+    sql: ${TABLE}.rebate_amt_limit_percent_den ;;
+  }
+  # Outstanding Rebate (dm/non)
+  dimension: outstanding_rebate_dm_non {
+    type: number
+    sql: ${TABLE}.outstanding_rebate_dm_non ;;
+  }
+  # DM/non rebate amt limit
+  dimension: dm_non_rebate_amt_limit {
+    type: number
+    sql: ${TABLE}.dm_non_rebate_amt_limit ;;
+  }
+  # cust rebate amt limit
+  dimension: cust_rebate_amt_limit {
+    type: number
+    sql: ${TABLE}.cust_rebate_amt_limit ;;
+  }
+  # Weighted Outstanding Rebate
+  dimension: weighted_outstanding_rebate {
+    label: "Weighted Outstanding Rebate"
+    type: number
+    sql: ${gross_sales_percent_by_customer} * ${outstanding_rebate} ;;
+  }
+  measure: sum_weighted_outstanding_rebate {
+    type: sum
+    sql: ${weighted_outstanding_rebate} ;;
+  }
+  # Gross Sales% by Customer
+  dimension: gross_sales_percent_by_customer {
+    label: "Gross Sales% by Customer"
+    type: number
+    sql: SAFE_DIVIDE(COALESCE(${TABLE}.gross_sales,0)
+      ,${TABLE}.gross_sales_selected_customer) ;;
+  }
+  # Outstanding Rebate
+  dimension: outstanding_rebate {
+    label: "Outstanding Rebate"
+    type: number
+    sql: ${TABLE}.outstanding_rebate ;;
+  }
+
+  # Outstanding Rebate (planning period)
+  measure: outstanding_rebate_planning_period {
+    label: "Outstanding Rebate (planning period)"
+    type: sum
+    sql: coalesce( ${outstanding_rebate_fixed_planning_period},0 )
+      + coalesce( ${outstanding_rebate_by_perc_valid_planning_period},0 ) ;;
+  }
+
+  dimension: actual_rebate_until_fillna {
+    type: date
+    sql: actual_rebate_until_fillna ;;
+  }
+
+  # Outstanding Rebate (fixed planning period)
+  dimension: outstanding_rebate_fixed_planning_period {
+    label: "Outstanding Rebate (fixed planning period)"
+    type: number
+    sql: CASE WHEN ${scheme_fixed} = 'Y'
+              THEN CASE WHEN ${one__off} = 'N'
+                          AND CAST( ${TABLE}.bi_update_date AS DATE) >= DATE_TRUNC(CURRENT_DATE(), YEAR)
+                          AND ${TABLE}.Rebate_ID IS NOT NULL
+                          AND ${TABLE}.Rebate_ID != ''
+                            THEN 0
+                        WHEN ${one__off} = 'N'
+                          AND CAST( ${TABLE}.bi_update_date AS DATE) < DATE_TRUNC(CURRENT_DATE(), YEAR)
+                            THEN ${TABLE}.rebate_fixed_amount_qty_converted_8b
+                        WHEN ${one__off} = 'N'
+                          AND ( ${TABLE}.Rebate_ID IS NULL OR ${TABLE}.Rebate_ID = '' )
+                          AND CAST( ${TABLE}.bi_update_date AS DATE) >= DATE_TRUNC(CURRENT_DATE(), YEAR)
+                            THEN ${TABLE}.rebate_fixed_amount_qty_converted_8b
+                        WHEN ${one__off} = 'Y'
+                          AND cast(${TABLE}.actual_rebate_until_fillna as date)  < cast(${TABLE}.contract_end as date)
+                            THEN ${TABLE}.rebate_fixed_amount_qty_converted_8b - ${actual_rebate_org_pdg_fixed_up_to_date}
+                          ELSE 0
+                    END
+          ELSE 0
+          END ;;
+  }
+  measure: sum_outstanding_rebate_fixed_planning_period {
+    type: sum
+    sql: ${outstanding_rebate_fixed_planning_period} ;;
+  }
+  measure: sum_outstanding_rebate_by_perc_planning_period {
+    type: sum
+    sql: ${outstanding_rebate_by_perc_planning_period} ;;
+  }
+  dimension: outstanding_rebate_by_perc_planning_period {
+    type: number
+    sql: ${TABLE}.outstanding_rebate_by_perc_planning_period ;;
+  }
+
+  # Actual Rebate (org pdt fixed up to date)
+  dimension: actual_rebate_org_pdg_fixed_up_to_date {
+    type: number
+    sql: CASE
+         WHEN ${scheme_fixed} = 'Y'
+           AND EXTRACT(YEAR FROM ${TABLE}.bi_update_date) = EXTRACT(YEAR FROM CURRENT_DATE())
+         THEN IFNULL(${rebate_amt_exc_vat}, 0) * 1.05
+         ELSE 0
+       END ;;
+  }
+  measure: sum_actual_rebate_org_pdg_fixed_up_to_date {
+    type: sum
+    sql: ${actual_rebate_org_pdg_fixed_up_to_date} ;;
+  }
+  measure: sum_rebate_fixed_amount_qty_converted_8b {
+    type: sum
+    sql: ${TABLE}.rebate_fixed_amount_qty_converted_8b ;;
+  }
+  dimension: demo_ytg_rebate_fixed_tracking_end {
+    type: string
+    sql: ${TABLE}.demo_ytg_rebate_fixed_tracking_end ;;
+  }
+
+  # Outstanding Rebate (by perc valid planning period)
+  dimension: outstanding_rebate_by_perc_valid_planning_period {
+    type: number
+    sql: COALESCE( ${cumulated_rebate_by_perc_valid_planning_period} ,0 );;
+  }
+  measure: sum_outstanding_rebate_by_perc_valid_planning_period {
+    type: sum
+    sql: ${outstanding_rebate_by_perc_valid_planning_period} ;;
+  }
+
+  # Cumulated Rebate (by perc valid planning period)
+  dimension: cumulated_rebate_by_perc_valid_planning_period {
+    type: number
+    sql: CASE WHEN ${date_dim} >= ${start_date} AND ${date_dim} <= ${end_date}
+                THEN ${TABLE}.Cumulated_rebate_invoice_by_perc
+            END ;;
+  }
+
+  # End Date
+  dimension: end_date {
+    type: date
+    sql: CAST(
+              CASE WHEN ${scheme_fixed} = 'Y' THEN CAST( {{rebate_planning_end._parameter_value}} AS DATE)
+              ELSE ${TABLE}.max_date END
+            AS DATE);;
+  }
+
+  # max_date
+  dimension: max_date {
+    type: date
+    sql: ${TABLE}.max_date ;;
+  }
+
+  # Start Date
+  dimension: start_date {
+    type: date
+    sql: CAST(
+              CASE WHEN ${scheme_fixed} = 'Y' THEN CAST( {{rebate_planning_start._parameter_value}} AS DATE)
+              ELSE ${TABLE}.min_date END
+            AS DATE);;
+  }
+  # min_date
+  dimension: min_date {
+    type: date
+    sql: ${TABLE}.min_date ;;
+  }
+
+  # Rebate For filter (planning period)
+  dimension: rebate_for_filter_planning_period {
+    label: "Rebate For filter (planning period)"
+    type: string
+    sql: CASE WHEN CAST(${TABLE}.contract_start AS DATE) <=  CAST(${rebate_planning_end_date_level} AS DATE)
+                AND CAST(${TABLE}.contract_end_extended AS DATE) >= CAST( {{rebate_planning_start._parameter_value}} AS DATE)
+                AND ( ${zp_notes} != 'only for show' OR ${zp_notes} IS NULL OR ${zp_notes} = '' )
+                AND ( ${frequency} != 'Pending' OR ${frequency} IS NULL OR ${frequency} = '' )
+              THEN 'True'
+              ELSE 'False'
+            END ;;
+  }
+  filter: rebate_for_filter_planning_period_F {
+    type: string
+    suggest_dimension: rebate_for_filter_planning_period_dim
+  }
+
+  dimension: rebate_for_filter_planning_period_dim {
+    type: string
+    sql: ${TABLE}.rebate_for_filter_planning_period_dim ;;
+  }
+
+  # Rebate Planning End (date level)
+  dimension: rebate_planning_end_date_level {
+    label: "Rebate Planning End (date level)"
+    type: string
+    sql:  {{rebate_planning_end._parameter_value}} ;;
+  }
+
+  dimension: rebate_to_category {
+    type: string
+    sql: ${TABLE}.rebate_to_category ;;
+  }
+  dimension: rebate_to_category_hide {
+    label: " "
+    type: string
+    sql: ${TABLE}.rebate_to_category ;;
+  }
+  measure: rebate_to_amt_proportion {
+    type: number
+    label: " "
+    sql: ${rebate_amt_dm_total}/${rebate_amt_total} ;;
+  }
+  dimension: text {
+    label: " "
+    type: string
+    sql: "Rebate To Amt Proportion" ;;
+  }
+  dimension: rebate_to_sku {
+    type: string
+    sql: ${TABLE}.rebate_to_sku ;;
+  }
+  parameter: selling_price_1 {
+    type: number
+    default_value: "0"
+  }
+  parameter: actual_rebate_period {
+    type: number
+    allowed_value: {
+      label: "Rebate For"
+      value: "1"
+    }
+    allowed_value: {
+      label: "Rebate To"
+      value: "2"
+    }
+    default_value: "2"
+  }
+  parameter: date_selection {
+    type: number
+    allowed_value: {
+      label: "Billing Date"
+      value: "1"
+    }
+    allowed_value: {
+      label: "Order Date"
+      value: "2"
+    }
+    default_value: "1"
+  }
+  parameter: include_non_rebate_trx {
+    type: string
+    allowed_value: {
+      label: "Include Non-Rebate Products"
+      value: "Include"
+    }
+    allowed_value: {
+      label: "Exclude Non-Rebate Products"
+      value: "Exclude"
+    }
+    default_value: "Exclude"
+  }
+  dimension: non_rebate_transaction_filter {
+    type: string
+    sql: case when {{include_non_rebate_trx._parameter_value}} = 'Exclude' and ${match_type} <> 'Unmatch Trans' then 'Keep'
+            when {{include_non_rebate_trx._parameter_value}} = 'Include' then 'Keep'
+            else 'Include' end
+    ;;
+  }
+  dimension: rank_max_contract_start {
+    type: number
+    sql: case when cast(${contract_start_date} as date) = cast(${max_contract_start} as date) then 1 else 2 end ;;
+  }
+  dimension: max_contract_start {
+    type: date
+    sql: ${TABLE}.max_contract_start ;;
+  }
+  dimension: over_time_filter {
+    type: yesno
+    sql: extract(year from ${bi_update_date}) >= extract(year from current_date())-1 ;;
+  }
+  filter: over_time_filter_F {
+    type: string
+    suggest_dimension: over_time_F
+  }
+  dimension: over_time_F {
+    type: string
+    sql: ${TABLE}.over_time_F ;;
+  }
+
+  dimension: alert_actual_rebate_until {
+    type: string
+    sql: ${TABLE}.alert_actual_rebate_until ;;
+  }
+  dimension_group: actual_rebate_until {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.actual_rebate_until ;;
+  }
+  dimension: actual_rebate_until_raw_date {
+    label: "Actual Rebate Until (raw date)"
+    type: date
+    sql: CASE WHEN {{date_selection._parameter_value}} = 1
+              THEN CAST(${TABLE}.actual_rebate_until AS DATE)
+              WHEN {{date_selection._parameter_value}} = 2
+              THEN CAST(${TABLE}.actual_rebate_until_orderdate AS DATE
+        END) ;;
+  }
+  dimension: actual_rebate_until_raw_date_dim {
+    type: date
+    sql: ${TABLE}.actual_rebate_until_raw_date ;;
+  }
+  # fix with type billingdate - orderdate (like datedim)
+  dimension: date {
+    type: date
+    sql: CASE WHEN {{date_selection._parameter_value}} = 1
+              THEN SAFE_CAST(${TABLE}.BillingDate AS DATE)
+              WHEN {{date_selection._parameter_value}} = 2
+              THEN SAFE_CAST(${TABLE}.OrderDate AS DATE
+        END) ;;
+  }
+  dimension: date_dim {
+    type: date
+    sql: ${TABLE}.date_dim ;;
+  }
+  dimension: year_date_dim {
+    type: string
+    sql: LEFT(CAST(${TABLE}.date_dim AS STRING), 4) ;;
+  }
+  dimension: year_date_clean {
+    type: string
+    sql: LEFT(CAST(${TABLE}.date_clean AS STRING), 4) ;;
+  }
+
+  dimension: actual_rebate_until_clean {
+    type: date
+    sql: ${TABLE}.actual_rebate_until_clean ;;
+  }
+  dimension: actual_rebate_until_clean_copy {
+    type: string
+    sql: FORMAT_DATE('%Y/%m', ${TABLE}.actual_rebate_until_clean) ;;
+  }
+
+  dimension_group: actual_rebate_until_orderdate {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.actual_rebate_until_orderdate ;;
+  }
+  # Here's what a typical dimension looks like in LookML.
+  # A dimension is a groupable field that can be used to filter query results.
+  # This dimension will be called "Assignmentnumber" in Explore.
+
+  dimension: assignmentnumber {
+    type: string
+    sql: ${TABLE}.assignmentnumber ;;
+  }
+
+  dimension: atccode {
+    type: string
+    sql: ${TABLE}.atccode ;;
+  }
+
+  dimension_group: bi_update {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.bi_update_date ;;
+  }
+  dimension: bi_date_month {
+    type: string
+    sql: left(cast(${TABLE}.bi_update_date  as string) , 7) ;;
+  }
+
+  dimension: billingdate {
+    type: string
+    sql: ${TABLE}.billingdate ;;
+  }
+  dimension: billingdate_ym {
+    type: string
+    sql: left(${TABLE}.billingdate,6) ;;
+  }
+  dimension: billing_date {
+    type: date
+    sql: SAFE_CAST( CONCAT(
+                          LEFT(${TABLE}.billingdate, 4), '-',
+                          SUBSTRING(${TABLE}.billingdate, 5, 2), '-',
+                          RIGHT(${TABLE}.billingdate, 2)
+                        ) as date) ;;
+  }
+
+  dimension: order_date {
+    type: date
+    sql: SAFE_CAST( CONCAT(
+                          LEFT(${TABLE}.orderdate, 4), '-',
+                          SUBSTRING(${TABLE}.orderdate, 5, 2), '-',
+                          RIGHT(${TABLE}.orderdate, 2)
+                        ) as date) ;;
+  }
+  dimension: last_record_per_selected_customer_sku_all_products_table {
+    type: string
+    sql: ${TABLE}.last_record_per_selected_customer_sku_all_products_table ;;
+  }
+
+
+  # DM Gross Sales proportion (planning period)
+  measure: sum_dm_gross_sales_proportion_planning_period {
+    label: "sum DM Gross Sales proportion (planning period)"
+    type: average
+    sql: ${TABLE}.dm_gross_sales_proportion_planning_period ;;
+    value_format_name: percent_2
+  }
+  measure: sum_dm_gross_sales_proportion_planning_period_1 {
+    type: sum
+    sql: ${TABLE}.dm_gross_sales_proportion_planning_period_1 ;;
+  }
+  measure: sum_dm_gross_sales_proportion_planning_period_2 {
+    type: sum
+    sql: ${TABLE}.dm_gross_sales_proportion_planning_period_2  ;;
+  }
+
+  # DM Outstanding Rebate proportion
+  measure: sum_dm_outstanding_rebate_proportion {
+    label: "sum DM Outstanding Rebate proportion"
+    type: average
+    sql: ${dm_outstanding_rebate_proportion} ;;
+    value_format_name: percent_2
+  }
+  measure: sum_dm_outstanding_rebate_proportion_2 {
+    label: "sum DM Outstanding Rebate proportion 2"
+    type: number
+    sql: SAFE_DIVIDE(
+                      sum(${TABLE}.outstanding_rebate_dm_non),
+                      sum(${TABLE}.outstanding_rebate )
+                      );;
+  }
+  measure: sum_dm_outstanding_rebate_proportion_2_deminator {
+    type: number
+    sql: SUM(DISTINCT ${TABLE}.outstanding_rebate_dm_non)  ;;
+    value_format: "###,##0"
+  }
+  measure: sum_dm_outstanding_rebate_proportion_2_divider {
+    type: number
+    sql: SUM(DISTINCT ${TABLE}.outstanding_rebate)  ;;
+    value_format: "###,##0"
+  }
+  measure: outstanding_rebate_1 {
+    type: number
+    sql: SUM(DISTINCT ${TABLE}.outstanding_rebate_1)  ;;
+    value_format: "###,##0"
+  }
+  measure: outstanding_rebate_2 {
+    type: number
+    sql: SUM(DISTINCT ${TABLE}.outstanding_rebate_2)  ;;
+    value_format: "###,##0"
+  }
+  dimension: dm_outstanding_rebate_proportion {
+    type: number
+    sql: SAFE_DIVIDE( ${TABLE}.outstanding_rebate_dm_non, ${TABLE}.outstanding_rebate ) ;;
+  }
+  measure: outstanding_rebate_no_fixed {
+    type: number
+    sql:
+      SUM(
+      CASE WHEN {% condition sku_f %} rebate_for_sku_for_set {% endcondition %}
+      AND ${TABLE}.rebate_for_filter_planning_period_dim = 'True'
+      THEN COALESCE(${TABLE}.outstanding_rebate_by_perc_planning_period ,0)
+      ELSE 0
+      END)
+      +
+      SUM(
+      CASE WHEN {% condition sku_f %} rebate_for_sku_for_set {% endcondition %}
+      AND ${TABLE}.rebate_for_filter_planning_period_dim = 'True'
+      THEN COALESCE(${TABLE}.outstanding_rebate_fixed_planning_period_dim ,0)
+      ELSE 0
+      END)
+       ;;
+  }
+  measure: perc_outstanding_rebate_no_fixed {
+    type: percent_of_total
+    sql: ${outstanding_rebate_no_fixed} ;;
+    value_format: "0.00 \" %\""
+  }
+
+  measure: sum_outstanding_rebate_dm_non {
+    type: sum
+    sql: ${TABLE}.outstanding_rebate_dm_non ;;
+  }
+  measure: sum_outstanding_rebate {
+    type: sum
+    sql: ${TABLE}.outstanding_rebate ;;
+  }
+
+
+  dimension: bq_table_row_id {
+    type: string
+    sql: ${TABLE}.bq_table_row_id ;;
+  }
+
+  dimension: channel {
+    type: string
+    sql: ${TABLE}.channel ;;
+  }
+
+  dimension: contract {
+    type: string
+    sql: ${TABLE}.contract ;;
+  }
+
+  dimension: contract_duration_month {
+    type: number
+    sql: ${TABLE}.contract_duration_month ;;
+  }
+  dimension: cumulated_rebate_by_perc_3_months_b4_end_last_month {
+    type: number
+    sql: ${TABLE}.cumulated_rebate_by_perc_3_months_b4_end_last_month ;;
+  }
+  measure: sum_cumulated_rebate_by_perc_3_months_b4_end_last_month {
+    type: sum
+    sql: ${cumulated_rebate_by_perc_3_months_b4_end_last_month} ;;
+  }
+
+  dimension: end_last_month {
+    type: date
+    sql: ${TABLE}.end_last_month ;;
+  }
+  dimension: one__off {
+    type: string
+    sql: ${TABLE}.one__off ;;
+  }
+  dimension: tracking_end_end_last_month {
+    type: date
+    sql: ${TABLE}.tracking_end_end_last_month ;;
+  }
+
+  # HEADER
+  # PAGE 1
+  dimension: page_1_header_1 {
+    type: string
+    sql: CONCAT(
+          "Selected Period: ",
+          FORMAT_DATE('%Y/%m/%d', CAST({{rebate_tracking_start._parameter_value}} AS DATE)),
+          " - ",
+          FORMAT_DATE('%Y/%m/%d', CAST({{rebate_tracking_end._parameter_value}} AS DATE))
+        ) ;;
+    html: <p style="color: black; background-color: #EEEEC2; font-size:22px; text-align:left; margin:0; padding:10px; line-height:normal; letter-spacing: 1px;">
+            Rebate Tracking<br>
+            <span style="color: black; font-size:60%; text-align:left; margin:0; padding:10px; line-height:normal; letter-spacing: 1px;">
+              {{rendered_value}}
+            </span>
+          </p> ;;
+  }
+  dimension: page_1_header_2 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #C3D3D0; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Contract Details<br>
+      <span style="color: black; font-size:60%; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Select contract or customer to view Rebate Status and Over Time </span></p> ;;
+  }
+  dimension: page_1_header_3 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #C3D3D0; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Rebate Overview <span></p> ;;
+  }
+  dimension: page_1_header_4 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #C3D3D0; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Rebate Over Time <span style="color: black; font-size:60%; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> (Exc Fixed Rebate) </span></p> ;;
+  }
+  dimension: page_1_header_5 {
+    type: string
+    sql: CONCAT(
+          "Selected Period: ",
+          FORMAT_DATE('%Y/%m/%d', CAST({{rebate_planning_start._parameter_value}} AS DATE)),
+          " - ",
+          FORMAT_DATE('%Y/%m/%d', CAST({{rebate_planning_end._parameter_value}} AS DATE))
+        ) ;;
+    html: <p style="color: black; background-color: #EEEEC2; font-size:22px; text-align:left; margin:0; padding:10px; line-height:normal; letter-spacing: 1px;">
+            Rebate Planning Period <br>
+            <span style="color: black; font-size:60%; text-align:left; margin:0; padding:10px; line-height:normal; letter-spacing: 1px;">
+              {{rendered_value}}
+            </span>
+          </p> ;;
+  }
+  dimension: page_1_header_6 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #C3D3D0; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Rebate For <span></p> ;;
+  }
+  dimension: page_1_header_7 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #C3D3D0; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Rebate To <span></p> ;;
+  }
+  dimension: page_1_header_8 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #C3D3D0; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> All Products <br>
+      <span style="color: black; font-size:60%; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Hover over the columns to see the SKU Sales over the past year </span></p> ;;
+  }
+
+  # PAGE 7
+  dimension: page_7_header_1 {
+    type: string
+    sql: CONCAT(
+          "Selected Period: ",
+          FORMAT_DATE('%Y/%m/%d', CAST({{rebate_tracking_start._parameter_value}} AS DATE)),
+          " - ",
+          FORMAT_DATE('%Y/%m/%d', CAST({{rebate_tracking_end._parameter_value}} AS DATE))
+        ) ;;
+    html: <p style="color: black; background-color: #EEEEC2; font-size:22px; text-align:left; margin:0; padding:10px; line-height:normal; letter-spacing: 1px;">
+            Rebate Tracking Period<br>
+            <span style="color: black; font-size:60%; text-align:left; margin:0; padding:10px; line-height:normal; letter-spacing: 1px;">
+              {{rendered_value}}
+            </span>
+          </p> ;;
+  }
+  dimension: page_7_header_2 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #C3D3D0; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Customer Product Details<br>
+      <span style="color: black; font-size:60%; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Select contract or customer to view latest Rebate Status and Transaction Detail </span></p> ;;
+  }
+  # PAGE 2
+  dimension: page_2_header_1 {
+    type: string
+    sql: CONCAT("Period: ", cast(cast({{rebate_planning_start._parameter_value}} as date) as string)," to ", cast(cast({{rebate_planning_end._parameter_value}} as date) as string));;
+    html:<p style="color: black; background-color: #C3D3D0; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Rebate For (後贈條件) <span style="color: black; font-size:60%; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;">{{rendered_value}}</span></p> ;;
+  }
+  dimension: page_2_header_2 {
+    type: string
+    sql: CONCAT("CD Period: ", cast(cast({{cd_custom_start._parameter_value}} as date) as string)," to ", cast(cast({{cd_custom_end._parameter_value}} as date) as string));;
+    html:<p style="color: black; background-color: #C3D3D0; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Rebate To (指定折讓明細) <span style="color: black; font-size:60%; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;">{{rendered_value}}</span></p> ;;
+  }
+  dimension: page_2_header_3 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #d4d4d4; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Outstanding Rebate Validation <span></p> ;;
+  }
+  dimension: page_2_header_4 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #e6e6e6 ; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Monthly Outstanding Rebate <span></p> ;;
+  }
+  dimension: page_2_header_5 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #e6e6e6 ; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Orders with Monthly Outstanding <span></p> ;;
+  }
+  # PAGE 3
+  dimension: page_3_header_1 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #C3D3D0; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> BI Total Recovered Discount <br>
+      <span style="color: black; font-size:60%; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Note there is short time lag between approval on IRIS and entry into ZP Transaction </span></p> ;;
+  }
+  dimension: page_3_header_2 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #C3D3D0 ; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Contract Recovered Discount <span></p> ;;
+  }
+  dimension: page_3_header_3 {
+    type: string
+    sql: "Header only" ;;
+    html:<p style="color: black; background-color: #C3D3D0 ; font-size:22px; text-align:left;margin:0;padding:10px;line-height:normal;letter-spacing: 1px;"> Recovered Discount Full Details <span></p> ;;
+  }
+
+
+  measure: rebate_forecast_by_perc_end_last_month {
+    type: number
+    sql:
+      SUM(${cumulated_rebate_by_perc_3_months_b4_end_last_month})/3*max(greatest(0,date_diff(
+      case when ${one__off} = 'N' then ${tracking_end_end_last_month}
+         when ${one__off} = 'Y' then least( cast(${TABLE}.contract_end as date), ${tracking_end_end_last_month} ) end,
+        greatest(${end_last_month}, date_add(cast({{rebate_tracking_start._parameter_value}} as date), interval -1 month) ), month)))
+
+      ;;
+  }
+  measure: rebate_forecast_fixed_tracking_end_v2 {
+    type: number
+    sql: sum(${TABLE}.rebate_fixed_amount_qty_converted_8b)/12*max(greatest(0,date_diff(
+          case when ${one__off} = 'N' then ${tracking_end_end_last_month}
+           when ${one__off} = 'Y' then least( cast(${TABLE}.contract_end as date), ${tracking_end_end_last_month} ) end,
+          greatest( greatest(${end_last_month}, cast(${TABLE}.actual_rebate_until_fillna as date)), date_add(cast({{rebate_tracking_start._parameter_value}} as date), interval -1 month)), month)))
+          ;;
+  }
+  measure: rebate_forecast_tracking_end {
+    type: number
+    sql: coalesce(${rebate_forecast_by_perc_end_last_month},0) + coalesce(${rebate_forecast_fixed_tracking_end_v2},0)
+      ;;
+  }
+
+  measure: outstanding_rebate_planning_period_db2 {
+    label: "Outstanding Rebate (planning period DB2)"
+    type: number
+    sql: COALESCE(SUM(${cumulated_rebate_by_perc_valid_planning_period}), 0)
+      + COALESCE(SUM(${outstanding_rebate_fixed_planning_period}), 0);;
+    value_format: "###,##0"
+  }
+  measure: sum_cumulated_rebate_by_perc_valid_planning_period {
+    type: sum
+    sql: ${cumulated_rebate_by_perc_valid_planning_period} ;;
+  }
+
+  measure: sum_Value_NHIprice_corrected_invoice_adjusted {
+    label: "sum_Value_NHIprice_corrected_invoice_adjusted"
+    type: sum
+    sql: ${TABLE}.Value_NHIprice_corrected_invoice_adjusted ;;
+  }
+  measure: sum_Value_NHIprice_invoice_selected_planning_period {
+    label: "sum_Value_NHIprice_invoice_selected_planning_period"
+    type: sum
+    sql: ${TABLE}.Value_NHIprice_invoice_selected_planning_period ;;
+  }
+  measure: perc_Value_NHIprice_invoice_selected_planning_period {
+    label: "perc_Value_NHIprice_invoice_selected_planning_period"
+    type: percent_of_total
+    sql: ${sum_Value_NHIprice_invoice_selected_planning_period} ;;
+    value_format: "0.00 \" %\""
+  }
+
+  # A measure is a field that uses a SQL aggregate function. Here are defined sum and average
+  # measures for this dimension, but you can also add measures of many different aggregates.
+  # Click on the type parameter to see all the options in the Quick Help panel on the right.
+
+
+
+  measure: total_contract_duration_month {
+    type: sum
+    sql: ${contract_duration_month} ;;  }
+  measure: average_contract_duration_month {
+    type: average
+    sql: ${contract_duration_month} ;;  }
+
+  dimension_group: contract_end {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.contract_end ;;
+  }
+
+  dimension_group: contract_end_extended {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.contract_end_extended ;;
+  }
+
+  dimension: contract_group_name {
+    type: string
+    sql: ${TABLE}.contract_group_name ;;
+  }
+
+  dimension_group: contract_start {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.contract_start ;;
+  }
+
+  dimension: contractprice {
+    type: string
+    sql: ${TABLE}.contractprice ;;
+  }
+
+  dimension: country1 {
+    type: string
+    sql: ${TABLE}.country1 ;;
+  }
+
+  dimension: country_id {
+    type: number
+    sql: ${TABLE}.country_id ;;
+  }
+
+  dimension: country_x {
+    type: string
+    sql: ${TABLE}.country_x ;;
+  }
+
+  dimension: customer_name_bi {
+    type: string
+    sql: ${TABLE}.customer_name_bi ;;
+  }
+
+  dimension: customercode_bi {
+    type: string
+    sql: ${TABLE}.customercode_bi ;;
+  }
+
+  dimension: disc_percentage {
+    type: string
+    sql: ${TABLE}.disc_percentage ;;
+  }
+  dimension: 8a_disc_percentage {
+    type: number
+    sql: SAFE_CAST(${TABLE}.disc_percentage AS NUMERIC) ;;
+    value_format_name: percent_2
+  }
+
+  dimension: total_disc_percentage {
+    label: "Total Disc%"
+    type: number
+    sql: coalesce(safe_cast(${8a_disc_percentage} as float64),0) + coalesce(safe_cast(${rebate_percent} as float64),0) ;;
+    value_format_name: percent_2
+  }
+
+  dimension: frequency {
+    type: string
+    sql: ${TABLE}.frequency ;;
+  }
+
+  dimension: hospital_level_condition {
+    type: string
+    sql: ${TABLE}.hospital_level_condition ;;
+  }
+
+  dimension: initial_balance {
+    type: string
+    sql: ${TABLE}.initial_balance ;;
+  }
+
+  dimension: invoicenumber {
+    type: string
+    sql: ${TABLE}.invoicenumber ;;
+  }
+
+  dimension: j_principalcode {
+    type: string
+    sql: ${TABLE}.j_principalcode ;;
+  }
+
+  dimension: kam {
+    type: string
+    sql: ${TABLE}.kam ;;
+  }
+
+  dimension: kam_raw {
+    type: string
+    sql: ${TABLE}.kam_raw ;;
+  }
+
+  dimension: listvalue_invoice {
+    type: number
+    sql: ${TABLE}.listvalue_invoice ;;
+  }
+
+  dimension: match_type {
+    type: string
+    sql: ${TABLE}.match_type ;;
+  }
+  filter: match_type_f {
+    type: string
+    suggest_dimension: match_type
+  }
+
+  dimension: netinvoicevalue_invoice {
+    type: number
+    sql: ${TABLE}.netinvoicevalue_invoice ;;
+  }
+
+  dimension: nhiitemname {
+    type: string
+    sql: ${TABLE}.nhiitemname ;;
+  }
+  dimension: nhiitemname_numeric {
+    type: number
+    sql: CASE WHEN ${TABLE}.nhiitemname IS NULL OR ${TABLE}.nhiitemname = '' OR ${TABLE}.nhiitemname = ' '
+              THEN 1
+              ELSE CAST(${TABLE}.nhiitemname AS INT64)
+        END;;
+  }
+
+  dimension: nhiitemprice {
+    type: number
+    sql: ${TABLE}.nhiitemprice ;;
+  }
+
+  dimension: nhiprice_per_pill {
+    type: number
+    sql: ${TABLE}.nhiprice_per_pill ;;
+  }
+  measure: sum_nhiprice_per_pill {
+    type: sum
+    sql: ${nhiprice_per_pill} ;;
+  }
+
+  dimension: nhiunitofmeasure {
+    type: string
+    sql: ${TABLE}.nhiunitofmeasure ;;
+  }
+
+  dimension: one_off {
+    label: "One-off"
+    type: string
+    sql: ${TABLE}.one_off ;;
+  }
+
+  dimension: orderdate {
+    type: string
+    sql: ${TABLE}.orderdate ;;
+  }
+
+  dimension: orderreasoncode {
+    type: string
+    sql: ${TABLE}.orderreasoncode ;;
+  }
+
+  dimension: orderreasondesc {
+    type: string
+    sql: ${TABLE}.orderreasondesc ;;
+  }
+
+  dimension: pg {
+    label: "PG (raw)"
+    type: string
+    sql: ${TABLE}.pg ;;
+  }
+
+  dimension: pg_clean {
+    label: "PG"
+    type: string
+    sql: CASE WHEN {{sku_sku_group._parameter_value}} = 'sku'
+              THEN CASE WHEN (${pg} IS NOT NULL AND ${pg}!= '') THEN ${pg}
+                        WHEN ${skucode_bi} = '303572' THEN 'TW'
+                        WHEN ${hospital_level_condition} ='Y' then 'HP'
+                    END
+              WHEN {{sku_sku_group._parameter_value}} = 'skugrp'
+              THEN CASE WHEN ${pg} IN ('MI','TW') THEN 'MI/TW'
+                        WHEN (${pg} IS NOT NULL AND ${pg}!= '') THEN ${pg}
+                        WHEN ${skucode_bi} = '303572' THEN 'TW'
+                        WHEN ${hospital_level_condition} ='Y' then 'HP'
+                    END
+          END ;;
+  }
+
+  dimension: dm_products {
+    label: "DM Products"
+    type: string
+    sql: CASE WHEN ${pg_clean} IN ('JD','JM','GB')
+              THEN "DM"
+              ELSE "Non-DM"
+          END ;;
+  }
+
+  dimension: rebate_for_category {
+    label: "Rebate for Category"
+    type: string
+    sql: CASE WHEN ${dm_products} ='DM' then 'DM'
+              WHEN ${skucode_bi} = '' AND ${rebate_description} LIKE '%DM%' THEN 'DM'
+              WHEN ${skucode_bi} = '' THEN 'HP'
+              ELSE 'Non-DM'
+          END ;;
+  }
+
+  dimension: purchaseordernumber {
+    type: string
+    sql: ${TABLE}.purchaseordernumber ;;
+  }
+
+  dimension: qty_transaction_invoice {
+    type: number
+    sql: ${TABLE}.qty_transaction_invoice ;;
+  }
+  measure: sum_qty_transaction_invoice {
+    type: sum
+    sql: ${TABLE}.qty_transaction_invoice ;;
+  }
+
+  dimension: rebate_amt_exc_vat {
+    type: number
+    sql: ${TABLE}.rebate_amt_exc_vat ;;
+  }
+  measure: sum_rebate_amt_exc_vat {
+    type: sum
+    sql: ${TABLE}.rebate_amt_exc_vat ;;
+  }
+
+  dimension: rebate_description {
+    type: string
+    sql: ${TABLE}.rebate_description ;;
+  }
+
+  dimension: rebate_execution_plan {
+    type: string
+    sql: ${TABLE}.rebate_execution_plan ;;
+  }
+
+  dimension: rebate_fixed_amount {
+    type: number
+    sql: ${TABLE}.rebate_fixed_amount ;;
+  }
+  measure: sum_rebate_fixed_amount {
+    type: sum
+    sql:  ${TABLE}.rebate_fixed_amount  ;;
+  }
+
+  dimension: rebate_fixed_qty {
+    type: number
+    sql: ${TABLE}.rebate_fixed_qty ;;
+  }
+
+  dimension: rebate_id {
+    type: string
+    sql: ${TABLE}.rebate_id ;;
+  }
+
+  dimension: rebate_per_tab {
+    type: string
+    sql: ${TABLE}.rebate_per_tab ;;
+  }
+
+  dimension: rebate_percentage {
+    type: string
+    sql: ${TABLE}.rebate_percentage ;;
+  }
+
+  dimension: rebate_percentage_inc_perunit {
+    type: string
+    sql: ${TABLE}.rebate_percentage_inc_perunit ;;
+  }
+  dimension: rebate_percent {
+    label: "Rebate%_"
+    type: number
+    sql: SAFE_CAST(${TABLE}.rebate_percentage_inc_perunit AS NUMERIC) ;;
+    value_format_name: percent_2
+  }
+
+
+  dimension: rebate_pg_1 {
+    type: string
+    sql: ${TABLE}.rebate_pg_1 ;;
+  }
+
+  dimension: rebate_pg_1_selling_price {
+    type: string
+    sql: ${TABLE}.rebate_pg_1_selling_price ;;
+  }
+
+  dimension: rebate_value_per_pill_invoice {
+    type: string
+    sql: ${TABLE}.rebate_value_per_pill_invoice ;;
+  }
+
+  dimension: rebate_value_percentage_corrected_invoice {
+    type: string
+    sql: ${TABLE}.rebate_value_percentage_corrected_invoice ;;
+  }
+
+  dimension: referencedocumentnumber {
+    type: string
+    sql: ${TABLE}.referencedocumentnumber ;;
+  }
+
+  dimension: restrictedstock {
+    type: string
+    sql: ${TABLE}.restrictedstock ;;
+  }
+
+  dimension: ris_territory {
+    type: string
+    sql: ${TABLE}.ris_territory ;;
+  }
+
+  dimension: salesorg1 {
+    type: string
+    sql: ${TABLE}.salesorg1 ;;
+  }
+
+  dimension: salesorg_x {
+    type: number
+    sql: ${TABLE}.salesorg_x ;;
+  }
+
+  dimension: salestype {
+    type: string
+    sql: ${TABLE}.salestype ;;
+  }
+
+  dimension_group: save_date {
+    type: time
+    timeframes: [raw, date, week, month, quarter, year]
+    convert_tz: no
+    datatype: date
+    sql: ${TABLE}.save_date ;;
+  }
+
+  dimension: save_datetime {
+    type: string
+    sql: ${TABLE}.save_datetime ;;
+  }
+
+  dimension: save_time {
+    type: string
+    sql: ${TABLE}.save_time ;;
+  }
+
+  dimension: scheme_by_perc {
+    type: string
+    sql: ${TABLE}.scheme_by_perc ;;
+  }
+
+  dimension: scheme_fixed {
+    type: string
+    sql: ${TABLE}.scheme_fixed ;;
+  }
+
+  dimension: scheme_no {
+    type: string
+    sql: ${TABLE}.scheme_no ;;
+  }
+  dimension: rebate_scheme_id {
+    type: string
+    sql: case when length(${scheme_no})>0 then left(${scheme_no}, length(${scheme_no})-5) end ;;
+  }
+  dimension: rebate_scheme_id_sort_1 {
+    type: string
+    sql: LEFT(${rebate_scheme_id}, 1) ;;
+  }
+  dimension: rebate_scheme_id_sort_2 {
+    type: number
+    sql: CAST( RIGHT(${rebate_scheme_id}, LENGTH(${rebate_scheme_id})-1) AS NUMERIC) ;;
+  }
+
+  dimension: selected_total_list {
+    type: string
+    sql: ${TABLE}.selected_total_list ;;
+  }
+
+  dimension: sellingprice {
+    type: number
+    sql: ${TABLE}.sellingprice ;;
+  }
+
+  dimension: serial_number {
+    type: number
+    sql: ${TABLE}.serial_number ;;
+  }
+
+  dimension: sku_clientdescription_bi_category3 {
+    type: string
+    sql: ${TABLE}.sku_clientdescription_bi_category3 ;;
+  }
+
+  dimension: skucode_bi {
+    type: string
+    sql: ${TABLE}.skucode_bi ;;
+  }
+
+  dimension: skudescription_bi {
+    type: string
+    sql: ${TABLE}.skudescription_bi ;;
+  }
+
+  measure: sum_sales_qty_s {
+    label: "sum Sales Qty ('s)"
+    type: sum
+    sql: ${sales_qty_s} ;;
+  }
+
+  dimension: sales_qty_s {
+    label: "Sales Qty ('s)"
+    type: number
+    sql: ${pills_per_box} * ${qty_transaction_invoice} ;;
+  }
+
+  dimension:pills_per_box  {
+    label: "Pills Per Box"
+    type: number
+    sql: SAFE_CAST(${TABLE}.NHIItemName AS INT) ;;
+  }
+  measure: sum_NHIItemName {
+    type: sum
+    sql:  SAFE_CAST(${TABLE}.NHIItemName AS INT) ;;
+  }
+
+  dimension: sku {
+    type: string
+    sql: case when ${skucode_bi} is null or length(${skucode_bi}) = 0 then 'Hospital Level'
+      else concat(${skucode_bi}, ' ', case when ${skudescription_bi} is null then '' else ${skudescription_bi} end)
+      end ;;
+  }
+  dimension: sku_copy {
+    type: string
+    sql: case when ${skucode_bi} is null or length(${skucode_bi}) = 0 then 'Hospital Level'
+          else concat(${skucode_bi}, ' ', case when ${skudescription_bi} is null then '' else ${skudescription_bi} end)
+          end ;;
+  }
+
+  dimension: sku_product_lvl {
+    type: string
+    sql: case when ${sku_dim} IN ("114094 JARDIANCE 10MG 30T", "146786 JARDIANCE 10MG 30T") then "JARDIANCE 10MG 30T"
+              when ${sku_dim} IN ("114095 JARDIANCE 25MG 30T", "146787 JARDIANCE 25MG 30T") then "JARDIANCE 25MG 30T"
+              when ${sku_dim} IN ("114675 JD DUO 12.5+850MG 60T", "148779 JD DUO 12.5+850MG 60T") then "JD DUO 12.5+850MG 60T"
+              when ${sku_dim} IN ("115157 TJ DUO 2.5+850MG 60T", "121377 TJ DUO 2.5+850MG 60T") then "TJ DUO 2.5+850MG 60T"
+              when ${sku_dim} IN ("301770 MIRAPEX 0.375MG 100'S", "125652 MIRAPEX 0.375MG 100'S") then "MIRAPEX 0.375MG 100'S"
+              when ${sku_dim} IN ("301772 MIRAPEX 0.75MG 100'S", "125653 MIRAPEX 0.75MG 100'S") then "MIRAPEX 0.75MG 100'S"
+              when ${sku_dim} IN ("301774 MIRAPEX 1.5MG 100'S", "125654 MIRAPEX 1.5MG 100'S") then "MIRAPEX 1.5MG 100'S"
+              else ${sku_dim} end
+    ;;
+  }
+  dimension: sku_group {
+    type: string
+    sql: case when ${sku_dim} IN ("114094 JARDIANCE 10MG 30T", "146786 JARDIANCE 10MG 30T") then "JARDIANCE 10MG 30T"
+              when ${sku_dim} IN ("114095 JARDIANCE 25MG 30T", "146787 JARDIANCE 25MG 30T") then "JARDIANCE 25MG 30T"
+              when ${sku_dim} IN ("121289 TRAJENTA 5MG 30T", "114370 TRAJENTA 5MG 30T") THEN "TRAJENTA 5MG 30T"
+              when ${sku_dim} IN ("114675 JD DUO 12.5+850MG 60T", "148779 JD DUO 12.5+850MG 60T") THEN "JD DUO 12.5+850MG 60T"
+              when ${sku_dim} IN ("121377 TJ DUO 2.5+850MG 60T", "115157 TJ DUO 2.5+850MG 60T") THEN "TJ DUO 2.5+850MG 60T"
+              when ${sku_dim} IN ("116520 GLYXAMBI 25 MG 30T", "156580 GLYXAMBI 25 MG 30T") THEN "GLYXAMBI 25 MG 30T"
+              when ${sku_dim} IN ("118699 MICARDIS 80MG 30T", "118720 MICARDIS 80 PLUS 30T", "122481 TWYNSTA 80+5MG 28T") THEN "MICARDIS 80MG 30T (PLUS)/ TW 80+5MG 28T"
+              when ${sku_dim} IN ("118702 MICARDIS 40MG 30T", "118721 MICARDIS 40 PLUS 30T") THEN "MICARDIS 40MG 30T (PLUS)"
+              when ${sku_dim} IN ("125652 MIRAPEX 0.375MG 100'S", "301770 MIRAPEX 0.375MG 100'S") THEN "MIRAPEX 0.375MG 100'S"
+              when ${sku_dim} IN ("125653 MIRAPEX 0.75MG 100'S", "301772 MIRAPEX 0.75MG 100'S") THEN "MIRAPEX 0.75MG 100'S"
+              when ${sku_dim} IN ("125654 MIRAPEX 1.5MG 100'S", "301774 MIRAPEX 1.5MG 100'S") THEN "MIRAPEX 1.5MG 100'S"
+              when ${sku_dim} IN ("184172 ACTILYSE 1VIAL -I", "920127 ACTILYSE 1VIAL -I") THEN "ACTILYSE 1VIAL -I"
+              when ${sku_dim} IN ("301081 PRADAXA CAP 110MG 60'S", "303964 PRADAXA CAP 150MG 60'S") THEN "PRADAXA(grp) 110MG 60'S & 150MG 60'S"
+              when ${sku_dim} IN ("304056 GIOTRIF 40MG 28T", "304057 GIOTRIF 30MG 28T") THEN "GIOTRIF(grp) 40MG 28T &  30MG 28T"
+              else ${sku_dim} end
+    ;;
+  }
+  dimension: sku_or_skugroup {
+    type: string
+    sql: case when {{sku_sku_group._parameter_value}} = 'sku' then ${sku_product_lvl}
+            else ${sku_group} end
+    ;;
+  }
+  dimension_group: snapshotdate {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.snapshotdate ;;
+  }
+
+  dimension: to_accrue {
+    type: string
+    sql: ${TABLE}.to_accrue ;;
+  }
+
+  dimension: totalquantity {
+    type: number
+    sql: ${TABLE}.totalquantity ;;
+  }
+
+  dimension: unitlistprice {
+    type: number
+    sql: ${TABLE}.unitlistprice ;;
+  }
+
+  dimension: unrestrictedstock {
+    type: number
+    sql: ${TABLE}.unrestrictedstock ;;
+  }
+  measure: sum_UnrestrictedStock {
+    type:  sum
+    sql: ${unrestrictedstock} ;;
+  }
+
+  dimension: usagecode {
+    type: string
+    sql: ${TABLE}.usagecode ;;
+  }
+
+  dimension: usagedescription {
+    type: string
+    sql: ${TABLE}.usagedescription ;;
+  }
+
+  dimension: value_nhiprice_corrected_invoice {
+    type: number
+    sql: ${TABLE}.value_nhiprice_corrected_invoice ;;
+  }
+  measure: sum_value_nhiprice_corrected_invoice {
+    type: sum
+    sql: ${TABLE}.value_nhiprice_corrected_invoice ;;
+  }
+
+  dimension: value_transaction_invoice {
+    type: number
+    sql: ${TABLE}.value_transaction_invoice ;;
+  }
+
+  measure: market_share_by_bucket {
+    type: number
+    sql: SAFE_DIVIDE( ${monthly_sales_past_6_month} , ${monthly_sales_bucket_past_6_month} )  ;;
+    value_format_name: percent_0
+  }
+  measure: monthly_sales_past_6_month {
+    type: number
+    sql: sum(case when ${year_month} >= date_add( current_date(), interval -6 month )
+                  then coalesce( ${value_transaction_monthly}, 0 )
+              end) / 6 ;;
+  }
+  measure: monthly_sales_bucket_past_6_month {
+    type: number
+    sql: sum(case when ${year_month} >= date_add( current_date(), interval -6 month )
+                  then coalesce( ${value_transaction_monthly_bucket}, 0 )
+              end) / 6 ;;
+  }
+  dimension: value_transaction_monthly {
+    type: number
+    sql: ${TABLE}.value_transaction_monthly ;;
+  }
+
+  dimension: value_transaction_monthly_bucket {
+    type: number
+    sql: ${TABLE}.value_transaction_monthly_bucket ;;
+  }
+
+  dimension: yearmonth {
+    type: string
+    sql: ${TABLE}.yearmonth ;;
+  }
+  dimension: year_month {
+    type: date
+    sql: CAST(${TABLE}.year_month AS DATE) ;;
+    datatype: date
+    value_format: "YYYY/MM"
+  }
+
+  dimension: zone {
+    type: string
+    sql: ${TABLE}.zone ;;
+  }
+
+  dimension: zonename {
+    type: string
+    sql: ${TABLE}.zonename ;;
+  }
+
+  dimension: zp_notes {
+    type: string
+    sql: ${TABLE}.zp_notes ;;
+  }
+
+  dimension: zp_update_date {
+    type: string
+    sql: ${TABLE}.zp_update_date ;;
+  }
+
+  dimension:  contract_clean{
+    type: string
+    sql: concat(${contract}, ' ', ${contract_group_name}) ;;
+  }
+  dimension: customer_clean {
+    label: "Customer"
+    type: string
+    sql: if (${customer_name_bi} in ('',' ')," ", concat(${customercode_bi}, ' ', ${customer_name_bi})) ;;
+  }
+  dimension: customer_null {
+    label: "Customer NULL"
+    type: string
+    sql: CASE WHEN ${customer_name_bi} IS NOT NULL AND ${customer_name_bi} != ''
+              THEN concat(${customercode_bi}, ' ', ${customer_name_bi})
+        END ;;
+  }
+
+  dimension: contract_group {
+    label: "Contract Group"
+    type: string
+    sql: coalesce(${contract_clean}, ${customer_clean}) ;;
+  }
+
+  # ROW NUMBER
+  # if [No of rows in rebate to table]>15 then 'More than 15 Customer SKU selected'
+  # elseif sum([cust rebate amt limit])<sum([Weighted Outstanding Rebate])
+  # then 'Add/Change ' + attr([Customer Name]) + ' SKU: Rebate Amt Limit < Outstanding Rebate'
+  # elseif sum(if [Rebate To Category]='DM' then [DM/non rebate amt limit] end)<sum(if [Rebate To Category]='DM' then [Outstanding Rebate (dm/non)] end)
+  # then 'Add/Change DM Products: Rebate Amt Limit < Outstanding Rebate'
+  # elseif sum(if [Rebate To Category]='Non-DM' then [DM/non rebate amt limit] end)<sum(if [Rebate To Category]='Non-DM' then [Outstanding Rebate (dm/non)] end)
+  # then 'Add/Change Non-DM Products: Rebate Amt Limit < Outstanding Rebate'
+  # elseif LAST()=0 and abs([Balance %])>0.001
+  # then 'Adjust ' + attr([Customer Name]) + ' Rebate Amt: Balance >0.1% of Weighted Outstanding Rebate'
+  # else''
+  # end
+  measure: sum_cust_rebate_amt_limit {
+    type: sum
+    sql: ${TABLE}.cust_rebate_amt_limit ;;
+  }
+  measure: sum_dm_dm_non_rebate_amt_limit {
+    type: sum
+    sql: CASE WHEN ${TABLE}.rebate_to_category = 'DM' THEN ${TABLE}.dm_non_rebate_amt_limit ELSE 0 END;;
+  }
+  measure: sum_dm_outstanding_rebate_dm_non {
+    type: sum
+    sql: CASE WHEN ${TABLE}.rebate_to_category = 'DM' THEN ${TABLE}.outstanding_rebate_dm_non ELSE 0 END;;
+  }
+  measure: sum_nondm_dm_non_rebate_amt_limit {
+    type: sum
+    sql: CASE WHEN ${TABLE}.rebate_to_category = 'Non-DM' THEN ${TABLE}.dm_non_rebate_amt_limit ELSE 0 END;;
+  }
+  measure: sum_nondm_outstanding_rebate_dm_non {
+    type: sum
+    sql: CASE WHEN ${TABLE}.rebate_to_category = 'Non-DM' THEN ${TABLE}.outstanding_rebate_dm_non ELSE 0 END;;
+  }
+
+  # if sum([cust rebate amt limit])<sum([Weighted Outstanding Rebate])// customer level cannot clear
+  # or sum([DM/non rebate amt limit])<sum([Outstanding Rebate (dm/non)])// customer level cannot clear
+  # or SUM([cust DM/non rebate amt limit])<SUM([Weighted Outstanding Rebate (cust dm/non)])// need adjustment
+  # then sum([Rebate Amt Limit])
+  # else SUM([Weighted Outstanding Rebate (cust dm/non)])*[Rebate Amt Limit % by Cust DM/Non]
+  # end
+  measure: recommended_rebate_amt {
+    type: number
+    sql: CASE WHEN sum(${cust_rebate_amt_limit}) < ${sum_weighted_outstanding_rebate}
+              OR sum(${dm_non_rebate_amt_limit}) < sum(${outstanding_rebate_dm_non})
+              OR sum(${cust_dm_non_rebate_amt_limit}) < sum(${weighted_outstanding_rebate_cust_dm_non})
+              THEN ${sum_rebate_amt_limit}
+              ELSE sum(${weighted_outstanding_rebate_cust_dm_non}) * ${rebate_amt_limit_percent_by_cust_dm_non}
+        end;;
+  }
+  # MEASURE
+  measure: filter_order_date {
+    label: "Filter - Order table"
+    type: yesno
+    sql: SUM(${qty_transaction_invoice}) != 0 ;;
+  }
+  measure: count {
+    type: count
+    drill_fields: [zonename, contract_group_name, nhiitemname]
+  }
+  measure: actual_rebate_prev_years_tracking_period {
+    type: sum
+    sql: ${TABLE}.actual_rebate_prev_years_tracking_period ;;
+    value_format: "#,##0"
+  }
+  measure: actual_rebate_current_year_tracking_period {
+    type: sum
+    sql: ${TABLE}.actual_rebate_current_year_tracking_period ;;
+    value_format: "#,##0"
+  }
+  measure: rebate_outstanding_prev_years_tracking_period {
+    type: sum
+    sql: ${TABLE}.rebate_outstanding_prev_years_tracking_period ;;
+    value_format: "#,##0"
+  }
+  measure: rebate_outstanding_current_years_tracking_period {
+    type: sum
+    sql: ${TABLE}.rebate_outstanding_current_years_tracking_period ;;
+    value_format: "#,##0"
+  }
+  measure: ytg_rebate_tracking_end {
+    type: number
+    sql: coalesce(sum(distinct ${TABLE}.ytg_rebate_by_perc_tracking_end),0)
+          + coalesce(sum(case when ${frequency} <> "Pending" or ${hospital_level_condition} = "Y" then ${TABLE}.ytg_rebate_fixed_tracking_end else 0 end),0)
+          ;;
+    value_format: "#,##0"
+  }
+  measure: sum_ytg_rebate_by_perc_tracking_end {
+    type: number
+    sql: coalesce(sum(distinct ${TABLE}.ytg_rebate_by_perc_tracking_end),0) ;;
+  }
+  dimension: ytg_rebate_by_perc_tracking_end {
+    type: number
+    sql: ${TABLE}.ytg_rebate_by_perc_tracking_end ;;
+  }
+  measure: sum_ytg_rebate_by_perc_tracking_end_1 {
+    type: number
+    sql: coalesce(sum(distinct ${TABLE}.ytg_rebate_by_perc_tracking_end_1),0) ;;
+  }
+  measure: sum_cumulated_rebate_by_perc_3_months_b4_tracking_end {
+    type: number
+    sql: coalesce(sum(${TABLE}.cumulated_rebate_by_perc_3_months_b4_tracking_end),0) ;;
+  }
+  measure: sum_cumulated_rebate_invoice_by_perc {
+    type: number
+    sql: coalesce(sum(${TABLE}.cumulated_rebate_invoice_by_perc),0) ;;
+  }
+  measure: sum_ytg_rebate_by_perc_tracking_end_2 {
+    type: number
+    sql: coalesce(sum(distinct ${TABLE}.ytg_rebate_by_perc_tracking_end_2),0) ;;
+  }
+
+  measure: sum_ytg_rebate_fixed_tracking_end {
+    type: number
+    sql: coalesce(sum(${TABLE}.ytg_rebate_fixed_tracking_end),0) ;;
+  }
+  measure: total_rebate_tracking_period {
+    type: number
+    sql: ${actual_rebate_current_year_tracking_period} + ${rebate_outstanding_prev_years_tracking_period}
+      + ${rebate_outstanding_current_years_tracking_period} + ${ytg_rebate_tracking_end};;
+    value_format: "#,##0"
+  }
+  measure: bi_update_date_ {
+    type: date
+    sql: max(${bi_update_date}) ;;
+  }
+  measure: accrued_rebate_5 {
+    type: sum
+    sql: ${TABLE}.accrued_rebate_5 ;;
+    value_format: "#,##0"
+  }
+  measure: actual_rebate_per_contract_per_month {
+    type: running_total
+    sql: ${actual_rebate_per_contract_per_month_copy} ;;
+  }
+  measure: actual_rebate_per_contract_per_month_running_total {
+    type: max
+    sql: ${TABLE}.actual_rebate_per_contract_per_month_running_total ;;
+  }
+  measure: month_actual_rebate_per_contract_per_month_total {
+    type: max
+    sql: ${TABLE}.month_actual_rebate_per_contract_per_month_total ;;
+  }
+  measure: sum_actual_rebate_per_contract_per_month {
+    type: sum
+    sql: ${TABLE}.actual_rebate_per_contract_per_month ;;
+  }
+
+  measure: actual_rebate_per_contract_per_month_copy {
+    type: sum
+    sql: ${TABLE}.actual_rebate_per_contract_per_month ;;
+  }
+  measure: transaction_discount_bi_total_skugrp {
+    label: "Transaction Discount (BI Total_skugrp)"
+    type: number
+    sql: 1- safe_divide(SUM(${TABLE}.net_sales_invoice_disc_period),sum(${TABLE}.value_nhiprice_invoice_selected_disc_period)) ;;
+  }
+  measure: transaction_discount_selected_total_skugrp  {
+    label: "Transaction Discount (Selected Total_skugrp)"
+    type: number
+    sql: 1- safe_divide(sum(case when ${selected_total_list} = 'Y' then ${TABLE}.net_sales_invoice_disc_period end),sum(case when ${selected_total_list} = 'Y' then ${TABLE}.value_nhiprice_invoice_selected_disc_period end)) ;;
+  }
+  measure: transaction_discount_total {
+    label: "Transaction Discount (Total)"
+    type: number
+    sql:  case when {{bi_selected_total._parameter_value}} = 1 then ${transaction_discount_bi_total_skugrp}
+               when {{bi_selected_total._parameter_value}} = 2 then ${transaction_discount_selected_total_skugrp} end
+    ;;
+    value_format: "0.00%"
+  }
+  measure: net_sales_invoice_disc_period {
+    type: sum
+    sql: ${TABLE}.net_sales_invoice_disc_period ;;
+    value_format: "#,##0"
+  }
+  measure: recover_rebate_for {
+    type: sum
+    sql: ${TABLE}.recover_rebate_for ;;
+    value_format: "#,##0"
+  }
+  measure: recover_rebate_to {
+    type: sum
+    sql: ${TABLE}.recover_rebate_to ;;
+    value_format: "#,##0"
+  }
+  measure: recovered_net_sales {
+    type: number
+    sql: ${net_sales_invoice_disc_period} + ${recover_rebate_for} + ${recover_rebate_to} ;;
+    value_format: "#,##0"
+  }
+  measure: recovered_discount {
+    type: number
+    sql: 1- safe_divide(${recovered_net_sales},sum(${TABLE}.value_nhiprice_invoice_selected_disc_period)) ;;
+    value_format: "0.00%"
+  }
+  measure: recovered_discount_bi_total_skugrp {
+    type: number
+    sql: ${recovered_discount} ;;
+  }
+  measure: adjusted_net_sales_selected_total {
+    type: number
+    sql: SUM(case when ${selected_total_list} = 'Y' then ${TABLE}.net_sales_invoice_disc_period else 0 end) +
+        SUM(case when ${selected_total_list} = 'Y' then ${TABLE}.recover_rebate_for else 0 end) +
+        SUM(case when ${selected_total_list} = 'Y' then ${TABLE}.recover_rebate_to else 0 end)
+    ;;
+  }
+  measure: recovered_discount_selected_total_skugrp {
+    type: number
+    sql: 1- safe_divide(${adjusted_net_sales_selected_total}, SUM(case when ${selected_total_list} = 'Y' then ${TABLE}.value_nhiprice_invoice_selected_disc_period else 0 end))
+      ;;
+  }
+  measure: recovered_discount_total {
+    type: number
+    sql: case when {{bi_selected_total._parameter_value}} = 1 then ${recovered_discount_bi_total_skugrp}
+      else ${recovered_discount_selected_total_skugrp} end ;;
+    value_format: "0.00%"
+  }
+  measure: ytg_qty_transaction_end_last_month{
+    label: "YTG Qty Transaction (end last month)"
+    type: number
+    sql: sum(${TABLE}.qty_transaction_exc_fg_3_months_b4_end_last_month)/3 * avg(date_diff(date(cast(extract(year from ${TABLE}.end_last_month) as int64),12,31),${end_last_month}, month))
+      ;;
+  }
+  measure: ytg_qty_transaction_up_to_date {
+    label: "YTG Qty Transaction (up to date)"
+    type: number
+    sql: ${ytg_qty_transaction_end_last_month} - sum(${TABLE}.qty_transaction_exc_fg_greater_end_last_month)
+      ;;
+  }
+
+
+  dimension: max_transaction_disc  {
+    type: number
+    sql: case when ${pg} = 'AC' then 0.13 else 0.15 end ;;
+  }
+  measure: recovered_net_sales_ytd {
+    type: number
+    sql:  sum(${TABLE}.net_sales_invoice_ytd) + sum(${TABLE}.recover_rebate_for_ytd) + sum(${TABLE}.recover_rebate_to_ytd)
+      ;;
+  }
+  measure: adjusted_net_sales_ytd_selected_total {
+    type: number
+    sql:  sum(case when selected_total_list = 'Y' then ${TABLE}.net_sales_invoice_ytd else 0 end) + sum(case when selected_total_list = 'Y' then ${TABLE}.recover_rebate_for_ytd else 0 end) + sum(case when selected_total_list = 'Y' then ${TABLE}.recover_rebate_to_ytd else 0 end)
+      ;;
+  }
+  measure: value_nhiprice_invoice_ytd {
+    type: sum
+    sql: ${TABLE}.value_nhiprice_invoice_ytd ;;
+  }
+  measure: value_nhiprice_invoice_ytd_selected_total {
+    type: sum
+    sql: case when ${selected_total_list} = 'Y' then coalesce( ${TABLE}.value_nhiprice_invoice_ytd,0) else 0 end;;
+  }
+  measure: recovered_discount_ytd{
+    type: number
+    sql: 1-safe_divide(${recovered_net_sales_ytd}, ${value_nhiprice_invoice_ytd}) ;;
+  }
+  measure: transaction_discount_ytd {
+    type: number
+    sql: 1- safe_divide(sum(${TABLE}.net_sales_invoice_ytd),${value_nhiprice_invoice_ytd}) ;;
+  }
+  measure: rebate_capacity_bi_total {
+    label: "Rebate Capacity (BI Total)"
+    type: number
+    sql:
+      COALESCE(${ytg_qty_transaction_up_to_date}, 0) *
+      MIN(CASE
+              WHEN ${nhiprice_per_pill} = 0 THEN NULL
+              ELSE ${nhiprice_per_pill}
+              END)
+      *
+      MIN(SAFE_CAST(${nhiitemname} AS float64))
+      *
+      GREATEST( MIN(${max_transaction_disc}) - ${recovered_discount_ytd} , 0)
+      +
+      ${value_nhiprice_invoice_ytd}
+      * GREATEST(
+          MIN(COALESCE(${max_transaction_disc}, 0)) - COALESCE(${transaction_discount_ytd}, 0)
+          , 0 )
+      ;;
+  }
+  measure: TEST_rebate_capacity_bi_total {
+    label: "TEST - Rebate Capacity (BI Total)"
+    type: number
+    sql:
+      ${value_nhiprice_invoice_ytd}
+      * GREATEST(
+          MIN(COALESCE(${max_transaction_disc}, 0)) - COALESCE(${transaction_discount_ytd}, 0)
+          , 0 )
+        ;;
+  }
+
+
+  # Use the sum aggregation to avoid issues at the grand total level
+  # sql_on: ${rebate_capacity_bi_total} > 0 ;;
+
+
+
+  measure: ytg_qty_transaction_end_last_month_selected_total {
+    type: number
+    sql: SUM(case when ${selected_total_list} = 'Y' then ${TABLE}.qty_transaction_exc_fg_3_months_b4_end_last_month else 0 end)/3*avg(date_diff(date(cast(extract(year from ${TABLE}.end_last_month) as int64),12,31),${end_last_month}, month))
+      ;;
+  }
+  measure: ytg_qty_transaction_up_to_date_selected_total {
+    type: number
+    sql: ${ytg_qty_transaction_end_last_month_selected_total} - sum(${TABLE}.qty_transaction_exc_fg_greater_end_last_month_selected) ;;
+  }
+  measure: rebate_capacity_selected_total {
+    label: "Rebate Capacity (Selected Total)"
+    type: number
+    sql: ${ytg_qty_transaction_up_to_date_selected_total}
+        * min(CASE
+              WHEN ${nhiprice_per_pill} = 0 THEN NULL
+              ELSE ${nhiprice_per_pill}
+              END)
+        * min(safe_cast(${nhiitemname} as float64))
+        * greatest(
+                  min(${max_transaction_disc}) - ${recovered_discount_ytd_selected_total_per_row}
+                  ,0)
+        + ${value_nhiprice_invoice_ytd_selected_total}
+        * greatest(
+                  min(${max_transaction_disc})-${transaction_discount_ytd_selected_total_per_row}
+                  ,0);;
+  }
+  measure: TEST1_rebate_capacity_selected_total {
+    label: "TEST1 - Rebate Capacity (Selected Total)"
+    type: number
+    sql: greatest(
+                  min(${max_transaction_disc}) - ${recovered_discount_ytd_selected_total_per_row}
+                  ,0)
+
+      ;;
+  }
+  measure: min_max_transaction_disc {
+    type: min
+    sql: ${max_transaction_disc} ;;
+  }
+
+
+
+
+  measure: recovered_discount_ytd_selected_total_per_row {
+    type: number
+    sql: 1-safe_divide(${adjusted_net_sales_ytd_selected_total},${value_nhiprice_invoice_ytd_selected_total});;
+  }
+  measure: transaction_discount_ytd_selected_total_per_row {
+    type: number
+    sql: 1- safe_divide(sum(case when selected_total_list = 'Y' then ${TABLE}.net_sales_invoice_ytd else 0 end),sum(case when selected_total_list = 'Y' then ${TABLE}.value_nhiprice_invoice_ytd else 0 end))
+      ;;
+  }
+  measure: rebate_capacity_by_end_of_year {
+    type: number
+    sql: case when {{bi_selected_total._parameter_value}} = 1 then ${rebate_capacity_bi_total}
+              when {{bi_selected_total._parameter_value}} = 2 then ${rebate_capacity_selected_total}
+             else 0 end
+              ;;
+    value_format: "#,##0"
+  }
+
+  measure: qty_transaction_disc_period {
+    type: sum
+    sql: ${TABLE}.qty_transaction_disc_period;;
+    value_format: "#,##0"
+  }
+  measure: value_nhiprice_invoice_selected_disc_period {
+    type: sum
+    sql: ${TABLE}.value_nhiprice_invoice_selected_disc_period ;;
+    value_format: "#,##0"
+  }
+  measure: transaction_discount {
+    type: number
+    sql: 1- safe_divide(${net_sales_invoice_disc_period}, ${value_nhiprice_invoice_selected_disc_period}) ;;
+    value_format: "0.00%"
+  }
+  dimension: sku_dim {
+    type: string
+    sql: ${TABLE}.sku_dim ;;
+  }
+  dimension: pg_clean_dim{
+    type: string
+    sql: ${TABLE}.pg_clean_dim ;;
+  }
+}

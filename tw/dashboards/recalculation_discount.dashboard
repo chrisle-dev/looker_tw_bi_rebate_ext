@@ -1,0 +1,406 @@
+---
+- dashboard: 3_recalculation_discount
+  title: '3.Recalculation: Discount'
+  layout: newspaper
+  preferred_viewer: dashboards-next
+  description: ''
+  preferred_slug: YONPhzxVMFKof3wrA9VrDN
+  elements:
+  - title: BI Total Recovered Discount
+    name: BI Total Recovered Discount
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    type: looker_grid
+    fields: [zanalyticstw_bi_rebate_consolidate_v3.pg, zanalyticstw_bi_rebate_consolidate_v3.sku_or_skugroup,
+      zanalyticstw_bi_rebate_consolidate_v3.transaction_discount_total, zanalyticstw_bi_rebate_consolidate_v3.recovered_discount_total,
+      zanalyticstw_bi_rebate_consolidate_v3.rebate_capacity_by_end_of_year, zanalyticstw_bi_rebate_consolidate_v3.qty_transaction_disc_period,
+      zanalyticstw_bi_rebate_consolidate_v3.value_nhiprice_invoice_selected_disc_period,
+      zanalyticstw_bi_rebate_consolidate_v3.net_sales_invoice_disc_period, zanalyticstw_bi_rebate_consolidate_v3.transaction_discount,
+      zanalyticstw_bi_rebate_consolidate_v3.recover_rebate_for, zanalyticstw_bi_rebate_consolidate_v3.recover_rebate_to,
+      zanalyticstw_bi_rebate_consolidate_v3.recovered_net_sales, zanalyticstw_bi_rebate_consolidate_v3.recovered_discount]
+    filters:
+      zanalyticstw_bi_rebate_consolidate_v3.nhiprice_per_pill: ">0"
+      zanalyticstw_bi_rebate_consolidate_v3.nhiitemname: "-EMPTY"
+    sorts: [zanalyticstw_bi_rebate_consolidate_v3.pg]
+    limit: 500
+    column_limit: 50
+    show_view_names: false
+    show_row_numbers: true
+    transpose: false
+    truncate_text: true
+    hide_totals: false
+    hide_row_totals: false
+    size_to_fit: true
+    table_theme: white
+    limit_displayed_rows: false
+    enable_conditional_formatting: false
+    header_text_alignment: left
+    header_font_size: '12'
+    rows_font_size: '12'
+    conditional_formatting_include_totals: false
+    conditional_formatting_include_nulls: false
+    show_sql_query_menu_options: false
+    show_totals: true
+    show_row_totals: true
+    truncate_header: false
+    minimum_column_width: 75
+    series_cell_visualizations:
+      zanalyticstw_bi_rebate_consolidate_v3.transaction_discount_total:
+        is_active: false
+    truncate_column_names: false
+    defaults_version: 1
+    hidden_pivots: {}
+    note_state: collapsed
+    note_display: above
+    note_text: 'Note there is short time lag between approval on IRIS and entry into
+      ZP Transaction
+
+      '
+    listen:
+      Date Selection: zanalyticstw_bi_rebate_consolidate_v3.date_selection
+      Discount Start: zanalyticstw_bi_rebate_consolidate_v3.discount_start
+      Discount End: zanalyticstw_bi_rebate_consolidate_v3.discount_end
+      Ris Territory: zanalyticstw_bi_rebate_consolidate_v3.ris_territory
+      Kam: zanalyticstw_bi_rebate_consolidate_v3.kam
+      Channel: zanalyticstw_bi_rebate_consolidate_v3.channel
+      Contract Group: zanalyticstw_bi_rebate_consolidate_v3.contract_group
+      Customer: zanalyticstw_bi_rebate_consolidate_v3.customer_clean
+      Pg: zanalyticstw_bi_rebate_consolidate_v3.pg
+      SKU: zanalyticstw_bi_rebate_consolidate_v3.sku
+      Bi Selected Total: zanalyticstw_bi_rebate_consolidate_v3.bi_selected_total
+      SKU SKU Group: zanalyticstw_bi_rebate_consolidate_v3.sku_sku_group
+    row: 0
+    col: 0
+    width: 24
+    height: 14
+  - title: Contract Recovered Discount
+    name: Contract Recovered Discount
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    type: looker_grid
+    fields: [zanalyticstw_bi_rebate_consolidate_v3.pg, zanalyticstw_bi_rebate_consolidate_v3.sku,
+      zanalyticstw_bi_rebate_consolidate_v3.disc_percentage, zanalyticstw_bi_rebate_consolidate_v3.rebate_percentage,
+      zanalyticstw_bi_rebate_consolidate_v3.rebate_description, zanalyticstw_bi_rebate_consolidate_v3.actual_rebate_until_clean,
+      zanalyticstw_bi_rebate_consolidate_v3.qty_transaction_disc_period, zanalyticstw_bi_rebate_consolidate_v3.value_nhiprice_invoice_selected_disc_period,
+      zanalyticstw_bi_rebate_consolidate_v3.net_sales_invoice_disc_period, zanalyticstw_bi_rebate_consolidate_v3.transaction_discount,
+      zanalyticstw_bi_rebate_consolidate_v3.recover_rebate_for, zanalyticstw_bi_rebate_consolidate_v3.recover_rebate_to,
+      zanalyticstw_bi_rebate_consolidate_v3.recovered_net_sales, zanalyticstw_bi_rebate_consolidate_v3.recovered_discount,
+      zanalyticstw_bi_rebate_consolidate_v3.total_disc_percentage]
+    sorts: [zanalyticstw_bi_rebate_consolidate_v3.actual_rebate_until_clean desc]
+    limit: 500
+    column_limit: 50
+    show_view_names: false
+    show_row_numbers: true
+    transpose: false
+    truncate_text: true
+    hide_totals: false
+    hide_row_totals: false
+    size_to_fit: true
+    table_theme: white
+    limit_displayed_rows: false
+    enable_conditional_formatting: false
+    header_text_alignment: left
+    header_font_size: '12'
+    rows_font_size: '12'
+    conditional_formatting_include_totals: false
+    conditional_formatting_include_nulls: false
+    show_sql_query_menu_options: false
+    column_order: ["$$$_row_numbers_$$$", zanalyticstw_bi_rebate_consolidate_v3.pg,
+      zanalyticstw_bi_rebate_consolidate_v3.sku, zanalyticstw_bi_rebate_consolidate_v3.disc_percentage,
+      zanalyticstw_bi_rebate_consolidate_v3.rebate_percentage, zanalyticstw_bi_rebate_consolidate_v3.total_disc_percentage,
+      zanalyticstw_bi_rebate_consolidate_v3.rebate_description, zanalyticstw_bi_rebate_consolidate_v3.actual_rebate_until_clean,
+      zanalyticstw_bi_rebate_consolidate_v3.qty_transaction_disc_period, zanalyticstw_bi_rebate_consolidate_v3.value_nhiprice_invoice_selected_disc_period,
+      zanalyticstw_bi_rebate_consolidate_v3.net_sales_invoice_disc_period, zanalyticstw_bi_rebate_consolidate_v3.transaction_discount,
+      zanalyticstw_bi_rebate_consolidate_v3.recover_rebate_for, zanalyticstw_bi_rebate_consolidate_v3.recover_rebate_to,
+      zanalyticstw_bi_rebate_consolidate_v3.recovered_net_sales, zanalyticstw_bi_rebate_consolidate_v3.recovered_discount]
+    show_totals: true
+    show_row_totals: true
+    truncate_header: false
+    minimum_column_width: 75
+    series_labels:
+      zanalyticstw_bi_rebate_consolidate_v3.qty_transaction_disc_period: Sales Qty
+        (box)
+      zanalyticstw_bi_rebate_consolidate_v3.value_nhiprice_invoice_selected_disc_period: Gross
+        Sales
+      zanalyticstw_bi_rebate_consolidate_v3.disc_percentage: 8a.Disc%
+      zanalyticstw_bi_rebate_consolidate_v3.rebate_percentage: Rebate%
+      zanalyticstw_bi_rebate_consolidate_v3.actual_rebate_until_clean: Actual Rebate
+        Until
+      zanalyticstw_bi_rebate_consolidate_v3.total_disc_percentage: Total Disc%
+    series_cell_visualizations:
+      zanalyticstw_bi_rebate_consolidate_v3.qty_transaction_disc_period:
+        is_active: false
+    truncate_column_names: false
+    defaults_version: 1
+    note_state: collapsed
+    note_display: above
+    note_text: 'Note there is short time lag between approval on IRIS and entry into
+      ZP Transaction
+
+      '
+    listen:
+      Date Selection: zanalyticstw_bi_rebate_consolidate_v3.date_selection
+      Discount Start: zanalyticstw_bi_rebate_consolidate_v3.discount_start
+      Discount End: zanalyticstw_bi_rebate_consolidate_v3.discount_end
+      Ris Territory: zanalyticstw_bi_rebate_consolidate_v3.ris_territory
+      Kam: zanalyticstw_bi_rebate_consolidate_v3.kam
+      Channel: zanalyticstw_bi_rebate_consolidate_v3.channel
+      Contract Group: zanalyticstw_bi_rebate_consolidate_v3.contract_group
+      Customer: zanalyticstw_bi_rebate_consolidate_v3.customer_clean
+      Pg: zanalyticstw_bi_rebate_consolidate_v3.pg
+      SKU: zanalyticstw_bi_rebate_consolidate_v3.sku
+    row: 14
+    col: 0
+    width: 24
+    height: 14
+  - title: Recovered Discount Full Details
+    name: Recovered Discount Full Details
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    type: looker_grid
+    fields: [zanalyticstw_bi_rebate_consolidate_v3.pg, zanalyticstw_bi_rebate_consolidate_v3.sku,
+      zanalyticstw_bi_rebate_consolidate_v3.qty_transaction_disc_period, zanalyticstw_bi_rebate_consolidate_v3.value_nhiprice_invoice_selected_disc_period,
+      zanalyticstw_bi_rebate_consolidate_v3.net_sales_invoice_disc_period, zanalyticstw_bi_rebate_consolidate_v3.transaction_discount,
+      zanalyticstw_bi_rebate_consolidate_v3.recover_rebate_for, zanalyticstw_bi_rebate_consolidate_v3.recover_rebate_to,
+      zanalyticstw_bi_rebate_consolidate_v3.recovered_net_sales, zanalyticstw_bi_rebate_consolidate_v3.recovered_discount,
+      zanalyticstw_bi_rebate_consolidate_v3.ris_territory, zanalyticstw_bi_rebate_consolidate_v3.contract_clean,
+      zanalyticstw_bi_rebate_consolidate_v3.channel, zanalyticstw_bi_rebate_consolidate_v3.customer_clean,
+      zanalyticstw_bi_rebate_consolidate_v3.kam, zanalyticstw_bi_rebate_consolidate_v3.disc_percentage,
+      zanalyticstw_bi_rebate_consolidate_v3.rebate_percentage, zanalyticstw_bi_rebate_consolidate_v3.total_disc_percentage,
+      zanalyticstw_bi_rebate_consolidate_v3.actual_rebate_until_clean]
+    filters:
+      zanalyticstw_bi_rebate_consolidate_v3.match_type: "-For Approval,-Market Sales"
+      zanalyticstw_bi_rebate_consolidate_v3.contract_exclude_filter_disc_period: Include
+    sorts: [zanalyticstw_bi_rebate_consolidate_v3.actual_rebate_until_clean desc]
+    limit: 500
+    column_limit: 50
+    show_view_names: false
+    show_row_numbers: true
+    transpose: false
+    truncate_text: true
+    hide_totals: false
+    hide_row_totals: false
+    size_to_fit: true
+    table_theme: white
+    limit_displayed_rows: false
+    enable_conditional_formatting: false
+    header_text_alignment: left
+    header_font_size: '12'
+    rows_font_size: '12'
+    conditional_formatting_include_totals: false
+    conditional_formatting_include_nulls: false
+    show_sql_query_menu_options: false
+    show_totals: true
+    show_row_totals: true
+    truncate_header: false
+    minimum_column_width: 75
+    series_labels:
+      zanalyticstw_bi_rebate_consolidate_v3.qty_transaction_disc_period: Sales Qty
+        (box)
+      zanalyticstw_bi_rebate_consolidate_v3.value_nhiprice_invoice_selected_disc_period: Gross
+        Sales
+      zanalyticstw_bi_rebate_consolidate_v3.contract_clean: Contract
+      zanalyticstw_bi_rebate_consolidate_v3.disc_percentage: 8a.Disc%
+      zanalyticstw_bi_rebate_consolidate_v3.rebate_percentage: Rebate%
+      zanalyticstw_bi_rebate_consolidate_v3.total_disc_percentage: Total Disc%
+      zanalyticstw_bi_rebate_consolidate_v3.actual_rebate_until_clean: Actual Rebate
+        Until
+    series_cell_visualizations:
+      zanalyticstw_bi_rebate_consolidate_v3.qty_transaction_disc_period:
+        is_active: false
+    truncate_column_names: false
+    defaults_version: 1
+    note_state: collapsed
+    note_display: above
+    note_text: 'Note there is short time lag between approval on IRIS and entry into
+      ZP Transaction
+
+      '
+    listen:
+      Date Selection: zanalyticstw_bi_rebate_consolidate_v3.date_selection
+      Discount Start: zanalyticstw_bi_rebate_consolidate_v3.discount_start
+      Discount End: zanalyticstw_bi_rebate_consolidate_v3.discount_end
+      Ris Territory: zanalyticstw_bi_rebate_consolidate_v3.ris_territory
+      Kam: zanalyticstw_bi_rebate_consolidate_v3.kam
+      Channel: zanalyticstw_bi_rebate_consolidate_v3.channel
+      Contract Group: zanalyticstw_bi_rebate_consolidate_v3.contract_group
+      Customer: zanalyticstw_bi_rebate_consolidate_v3.customer_clean
+      Pg: zanalyticstw_bi_rebate_consolidate_v3.pg
+      SKU: zanalyticstw_bi_rebate_consolidate_v3.sku
+      Include Completed Contracts Disc: zanalyticstw_bi_rebate_consolidate_v3.include_completed_contracts_disc
+    row: 28
+    col: 0
+    width: 24
+    height: 14
+  filters:
+  - name: Date Selection
+    title: Date Selection
+    type: field_filter
+    default_value: '1'
+    allow_multiple_values: true
+    required: false
+    ui_config:
+      type: dropdown_menu
+      display: inline
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    listens_to_filters: []
+    field: zanalyticstw_bi_rebate_consolidate_v3.date_selection
+  - name: Discount Start
+    title: Discount Start
+    type: field_filter
+    default_value: 2024/01/01
+    allow_multiple_values: true
+    required: false
+    ui_config:
+      type: advanced
+      display: popover
+      options: []
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    listens_to_filters: []
+    field: zanalyticstw_bi_rebate_consolidate_v3.discount_start
+  - name: Discount End
+    title: Discount End
+    type: field_filter
+    default_value: 2024/02/27
+    allow_multiple_values: true
+    required: false
+    ui_config:
+      type: advanced
+      display: popover
+      options: []
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    listens_to_filters: []
+    field: zanalyticstw_bi_rebate_consolidate_v3.discount_end
+  - name: Ris Territory
+    title: Ris Territory
+    type: field_filter
+    default_value: ''
+    allow_multiple_values: true
+    required: false
+    ui_config:
+      type: checkboxes
+      display: popover
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    listens_to_filters: []
+    field: zanalyticstw_bi_rebate_consolidate_v3.ris_territory
+  - name: Kam
+    title: Kam
+    type: field_filter
+    default_value: ''
+    allow_multiple_values: true
+    required: false
+    ui_config:
+      type: checkboxes
+      display: popover
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    listens_to_filters: []
+    field: zanalyticstw_bi_rebate_consolidate_v3.kam
+  - name: Channel
+    title: Channel
+    type: field_filter
+    default_value: ''
+    allow_multiple_values: true
+    required: false
+    ui_config:
+      type: checkboxes
+      display: popover
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    listens_to_filters: []
+    field: zanalyticstw_bi_rebate_consolidate_v3.channel
+  - name: Contract Group
+    title: Contract Group
+    type: field_filter
+    default_value: ''
+    allow_multiple_values: true
+    required: false
+    ui_config:
+      type: tag_list
+      display: popover
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    listens_to_filters: []
+    field: zanalyticstw_bi_rebate_consolidate_v3.contract_group
+  - name: Customer
+    title: Customer
+    type: field_filter
+    default_value: ''
+    allow_multiple_values: true
+    required: false
+    ui_config:
+      type: tag_list
+      display: popover
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    listens_to_filters: []
+    field: zanalyticstw_bi_rebate_consolidate_v3.customer_clean
+  - name: Pg
+    title: Pg
+    type: field_filter
+    default_value: ''
+    allow_multiple_values: true
+    required: false
+    ui_config:
+      type: tag_list
+      display: popover
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    listens_to_filters: []
+    field: zanalyticstw_bi_rebate_consolidate_v3.pg
+  - name: SKU
+    title: SKU
+    type: field_filter
+    default_value: ''
+    allow_multiple_values: true
+    required: false
+    ui_config:
+      type: tag_list
+      display: popover
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    listens_to_filters: []
+    field: zanalyticstw_bi_rebate_consolidate_v3.sku
+  - name: Bi Selected Total
+    title: Bi Selected Total
+    type: field_filter
+    default_value: '1'
+    allow_multiple_values: true
+    required: false
+    ui_config:
+      type: dropdown_menu
+      display: inline
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    listens_to_filters: []
+    field: zanalyticstw_bi_rebate_consolidate_v3.bi_selected_total
+  - name: SKU SKU Group
+    title: SKU SKU Group
+    type: field_filter
+    default_value: skugrp
+    allow_multiple_values: true
+    required: false
+    ui_config:
+      type: dropdown_menu
+      display: inline
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    listens_to_filters: []
+    field: zanalyticstw_bi_rebate_consolidate_v3.sku_sku_group
+  - name: Include Completed Contracts Disc
+    title: Include Completed Contracts Disc
+    type: field_filter
+    default_value: Include
+    allow_multiple_values: true
+    required: false
+    ui_config:
+      type: dropdown_menu
+      display: inline
+    model: rebate_tw_bi
+    explore: zanalyticstw_bi_rebate_consolidate_v3
+    listens_to_filters: []
+    field: zanalyticstw_bi_rebate_consolidate_v3.include_completed_contracts_disc
