@@ -1,11 +1,12 @@
-
-project_name: "tile_chris"
-
-application: tile_chris {
-  label: "tile_chris"
-  url: "https://localhost:8080/bundle.js"
-  # file: "bundle.js
+application: tw_bi_rebate_ext {
+  label: "TW BI Rebate Extension"
+  file: "dist/bundle.js"
+  mount_points: {
+    dashboard_vis: yes
+    dashboard_tile: yes
+    standalone: yes
+  }
   entitlements: {
-    core_api_methods: ["me"] #Add more entitlements here as you develop new functionality
+    core_api_methods: ["me"]
   }
 }
