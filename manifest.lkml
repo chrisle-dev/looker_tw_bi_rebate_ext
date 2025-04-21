@@ -1,4 +1,6 @@
-application: tw_bi_rebate_ext {
+project_name: "tw_bi_rebate_extension"
+
+application: tw_bi_rebate_extension {
   label: "TW BI Rebate Extension"
   file: "dist/bundle.js"
   mount_points: {
