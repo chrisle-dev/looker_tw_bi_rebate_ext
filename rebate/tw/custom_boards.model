@@ -1,6 +1,0 @@
-connection: "da-dev-rebate-tw-bi"
-
-include: "/rebate/tw/datasets/Custom_saved_boards_daily.view.lkml"
-
-
-explore: custom_saved_boards_daily {}
