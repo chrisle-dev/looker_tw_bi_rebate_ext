@@ -8,10 +8,11 @@ import {
   SpaceVertical,
 } from "@looker/components";
 import { ExtensionContext40 } from "@looker/extension-sdk-react";
+import type { ExtensionContextData40 } from "@looker/extension-sdk-react";
 
 const VisualizationData = () => {
   const { visualizationData, visualizationSDK } =
-    useContext(ExtensionContext40);
+    useContext<ExtensionContextData40>(ExtensionContext40);
 
   return (
     <>
