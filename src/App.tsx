@@ -18,13 +18,16 @@
  * and returns the logged in user.
  */
 import React from "react";
-import { ExtensionProvider } from "@looker/extension-sdk-react";
+import { ExtensionProvider40 } from "@looker/extension-sdk-react";
+import { ComponentsProvider } from "@looker/components";
 import { hot } from "react-hot-loader/root";
 
-import VisualizationData from "./VisualizationData";
+import Inspector from "./Inspector";
 
 export const App = hot(() => (
-  <ExtensionProvider>
-    <VisualizationData />
-  </ExtensionProvider>
+  <ExtensionProvider40>
+    <ComponentsProvider>
+      <Inspector />
+    </ComponentsProvider>
+  </ExtensionProvider40>
 ));
