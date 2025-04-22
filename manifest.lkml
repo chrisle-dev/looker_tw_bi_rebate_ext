@@ -9,6 +9,17 @@ application: tw_bi_rebate_extension {
     standalone: yes
   }
   entitlements: {
-    core_api_methods: ["me"]
+    core_api_methods: ["me", "all_artifacts", "update_artifacts"]
+    use_form_submit: yes
+    use_embeds: yes
+    use_iframes: yes
+    use_downloads: yes
+    use_clipboard: yes
+    navigation: yes
+    new_window: yes
+    local_storage: yes
+    allow_same_origin: yes
+    allow_forms: yes
+    allow_modals: yes
   }
 }

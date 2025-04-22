@@ -13,9 +13,10 @@
 // limitations under the License.
 
 import React, { useCallback, useEffect, useContext } from "react";
-import { SpaceVertical, Box } from "@looker/components";
+import { SpaceVertical, Box, Divider } from "@looker/components";
 import { ExtensionContext40 } from "@looker/extension-sdk-react";
 import VisualizationData from "./components/VisualizationData/VisualizationData";
+import ArtifactManager from "./components/VisualizationData/ArtifactManager";
 
 const Inspector = () => {
   const { extensionSDK } = useContext(ExtensionContext40);
@@ -28,6 +29,10 @@ const Inspector = () => {
     <SpaceVertical gap="small">
       <Box width="100%">
         <VisualizationData />
+      </Box>
+      <Divider />
+      <Box width="100%">
+        <ArtifactManager />
       </Box>
     </SpaceVertical>
   );

@@ -9,6 +9,7 @@ import {
 } from "@looker/components";
 import { ExtensionContext40 } from "@looker/extension-sdk-react";
 import type { ExtensionContextData40 } from "@looker/extension-sdk-react";
+import SaveVisualization from "./SaveVisualization";
 
 const VisualizationData = () => {
   const { visualizationData, visualizationSDK } =
@@ -30,6 +31,15 @@ const VisualizationData = () => {
         <SpaceVertical gap="small" width="100%">
           <Card width="100%">
             <CardContent>
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Span fontWeight="bold">Visualization Data</Span>
+                <SaveVisualization 
+                  userId={visualizationData.queryResponse?.userId} 
+                  dashboardId={visualizationData.queryResponse?.dashboardId} 
+                  contract={visualizationData.queryResponse?.contract} 
+                  sku={visualizationData.queryResponse?.sku} 
+                />
+              </Box>
               <Accordion2 label="Query response">
                 <Box mt="medium">
                   <pre style={{ width: "300px" }}>
