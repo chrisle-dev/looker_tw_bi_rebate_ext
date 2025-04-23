@@ -18,8 +18,5 @@ application: tw_bi_rebate_extension {
     navigation: yes
     new_window: yes
     local_storage: yes
-    allow_same_origin: yes
-    allow_forms: yes
-    allow_modals: yes
   }
 }
