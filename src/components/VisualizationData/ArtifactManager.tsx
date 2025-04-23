@@ -34,7 +34,7 @@ interface ArtifactManagerProps {
 const ArtifactManager: React.FC<ArtifactManagerProps> = ({
   namespace = "visualization_data",
 }) => {
-  const { extensionSDK } = useContext<ExtensionContextData40>(ExtensionContext40);
+  const { extensionSDK, coreSDK } = useContext<ExtensionContextData40>(ExtensionContext40);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,19 +82,10 @@ const ArtifactManager: React.FC<ArtifactManagerProps> = ({
           version: artifact.version // Required for updates
         }
       ];
+
+      const response = await coreSDK.ok(coreSDK.update_artifacts(namespace, artifacts))
       
-      const response = await extensionSDK.serverProxy(
-        `api/4.0/artifacts/${namespace}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updatePayload),
-        }
-      );
-      
-      if (response.ok) {
+      if (response.length > 0) {
         // Refresh the list after update
         await fetchArtifacts();
       } else {

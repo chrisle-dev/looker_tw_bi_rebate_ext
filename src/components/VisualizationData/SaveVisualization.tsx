@@ -23,7 +23,7 @@ const SaveVisualization: React.FC<SaveVisualizationProps> = ({
   contract,
   sku,
 }) => {
-  const { visualizationData, visualizationSDK, extensionSDK } =
+  const { visualizationData, visualizationSDK, coreSDK } =
     useContext<ExtensionContextData40>(ExtensionContext40);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
@@ -63,19 +63,8 @@ const SaveVisualization: React.FC<SaveVisualizationProps> = ({
       ];
 
       // Call the Looker API to save the artifact
-      const response = await extensionSDK.serverProxy(
-        `api/4.0/artifacts/${namespace}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(artifacts),
-        }
-      );
+      const response = await coreSDK.ok(coreSDK.update_artifacts(namespace, artifacts))
       
-      // Log the response (it's already parsed by serverProxy)
-      console.log("Saved artifact response:", response.ok ? response.body : response);
       setMessage("Visualization data saved successfully");
     } catch (error) {
       console.error("Error saving visualization data:", error);
