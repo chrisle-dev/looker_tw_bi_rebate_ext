@@ -17,17 +17,17 @@
  * HelloWorld makes a simple call to the Looker API using the Extension Framework's built in authentication,
  * and returns the logged in user.
  */
-import React from "react";
-import { ExtensionProvider40 } from "@looker/extension-sdk-react";
-import { ComponentsProvider } from "@looker/components";
-import { hot } from "react-hot-loader/root";
+import React from 'react';
+import { ExtensionProvider40 } from '@looker/extension-sdk-react';
+import { ComponentsProvider } from '@looker/components';
+import { hot } from 'react-hot-loader/root';
 
-import Inspector from "./Inspector";
+import RebateTable from './components/RebateTable/RebateTable';
 
 export const App = hot(() => (
   <ExtensionProvider40>
     <ComponentsProvider>
-      <Inspector />
+      <RebateTable />
     </ComponentsProvider>
   </ExtensionProvider40>
 ));
