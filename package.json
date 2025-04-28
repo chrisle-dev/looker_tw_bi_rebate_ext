@@ -10,7 +10,8 @@
     "build": "export BABEL_ENV=build && webpack --config webpack.prod.js",
     "clean": "rm -rf dist",
     "develop": "webpack serve --hot --port 8080 --https --disable-host-check --config webpack.develop.js",
-    "prebuild": "yarn clean"
+    "prebuild": "yarn clean",
+    "lint": "eslint --fix"
   },
   "dependencies": {
     "@looker/components": "^5.0.3",
@@ -51,12 +52,19 @@
     "@types/readable-stream": "^2.3.5",
     "@types/semver": "^7.3.1",
     "@types/styled-components": "5.1.5",
+    "@typescript-eslint/eslint-plugin": "^8.31.0",
+    "@typescript-eslint/parser": "^8.31.0",
     "babel-loader": "^8.2.3",
     "babel-loader-exclude-node-modules-except": "^1.2.1",
     "babel-preset-nano-react-app": "^0.1.0",
+    "eslint": "^9.25.1",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-prettier": "^5.2.6",
+    "eslint-plugin-react": "^7.37.5",
     "minimist": "^1.2.5",
     "nodemon": "^2.0.14",
     "npm-run-all": "^4.1.5",
+    "prettier": "^3.5.3",
     "react-hot-loader": "^4.13.0",
     "typescript": "4.4.4",
     "webpack": "^5.10.0",
@@ -79,5 +87,6 @@
         }
       ]
     ]
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
