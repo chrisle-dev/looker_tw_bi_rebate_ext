@@ -59,6 +59,7 @@ const customFields: Field[] = [
 ];
 
 function sortAndGroupQueryData(data: any[], fields: Field[]): DataItem[][] {
+  console.log('fields', fields);
   const sortedItems = data.sort((a, b) => {
     const ka = a[fields[0].name].value + '_' + a[fields[2].name].value;
     const kb = b[fields[0].name].value + '_' + b[fields[2].name].value;
@@ -98,15 +99,18 @@ function sortAndGroupQueryData(data: any[], fields: Field[]): DataItem[][] {
     } else {
       rowSpanMap['cat']++;
     }
-
-    const values = fields.map((f, i) => ({
-      name: f.name,
-      value: item[f.name].value,
-      rendered: item[f.name].rendered || item[f.name].value,
-      rowSpan: i > 2 ? 1 : 0,
-    }));
-
-    result.push(values);
+    try {
+      const values = fields.map((f, i) => ({
+        name: f.name,
+        value: item[f.name].value,
+        rendered: item[f.name].rendered || item[f.name].value,
+        rowSpan: i > 2 ? 1 : 0,
+      }));
+      result.push(values);
+    } catch (error) {
+      console.log('error item', item);
+      console.error(error);
+    }
   });
 
   result[sortedItems.length - rowSpanMap['cus']][0].rowSpan = rowSpanMap['cus'];
