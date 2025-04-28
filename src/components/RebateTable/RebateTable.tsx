@@ -21,6 +21,7 @@ type Field = {
   label: string;
   name: string;
   isCustom?: boolean;
+  defaultValue?: any;
 };
 
 type DataItem = {
@@ -35,31 +36,35 @@ const customFields: Field[] = [
     label: 'FG/CD',
     name: 'fg_cd',
     isCustom: true,
+    defaultValue: 'fg',
   },
   {
     label: 'Rebate Product Qty',
     name: 'rebate_product_qty',
     isCustom: true,
+    defaultValue: 0,
   },
   {
     label: 'Selling Price',
     name: 'selling_price',
     isCustom: true,
+    defaultValue: 0,
   },
   {
     label: 'Rebate Amount',
     name: 'rebate_amount',
     isCustom: true,
+    defaultValue: 0,
   },
   {
     label: 'Balance',
     name: 'balance',
     isCustom: true,
+    defaultValue: 0,
   },
 ];
 
 function sortAndGroupQueryData(data: any[], fields: Field[]): DataItem[][] {
-  console.log('fields', fields);
   const sortedItems = data.sort((a, b) => {
     const ka = a[fields[0].name].value + '_' + a[fields[2].name].value;
     const kb = b[fields[0].name].value + '_' + b[fields[2].name].value;
@@ -99,18 +104,14 @@ function sortAndGroupQueryData(data: any[], fields: Field[]): DataItem[][] {
     } else {
       rowSpanMap['cat']++;
     }
-    try {
-      const values = fields.map((f, i) => ({
-        name: f.name,
-        value: item[f.name].value,
-        rendered: item[f.name].rendered || item[f.name].value,
-        rowSpan: i > 2 ? 1 : 0,
-      }));
-      result.push(values);
-    } catch (error) {
-      console.log('error item', item);
-      console.error(error);
-    }
+
+    const values = fields.map((f, i) => ({
+      name: f.name,
+      value: item[f.name] ? item[f.name].value : f.defaultValue,
+      rendered: item[f.name] ? item[f.name].rendered || item[f.name].value : f.defaultValue,
+      rowSpan: i > 2 ? 1 : 0,
+    }));
+    result.push(values);
   });
 
   result[sortedItems.length - rowSpanMap['cus']][0].rowSpan = rowSpanMap['cus'];
