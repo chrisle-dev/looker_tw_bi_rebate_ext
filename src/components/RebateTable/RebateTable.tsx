@@ -51,7 +51,10 @@ const RebateTable = () => {
   useEffect(() => {
     if (!visualizationData?.queryResponse) return;
     setFields(
-      visualizationData.queryResponse.fields['dimensions'].map((item) => ({
+      [
+        ...visualizationData.queryResponse.fields['dimensions'],
+        ...visualizationData.queryResponse.fields['measures'],
+      ].map((item) => ({
         label: item['label_short'],
         name: item['name'],
       })),
@@ -60,18 +63,25 @@ const RebateTable = () => {
   }, [visualizationData]);
 
   return (
-    <Box width="100%">
-      <Table>
+    <Box>
+      <Table style={{ borderCollapse: 'collapse' }}>
         <TableHead>
           {[...fields, ...extraFields].map((f) => (
-            <TableHeaderCell>{f.label}</TableHeaderCell>
+            <TableHeaderCell px="u2" border>
+              {f.label}
+            </TableHeaderCell>
           ))}
         </TableHead>
-        <TableBody>
+        <TableBody fontSize={'medium'}>
           {queryData.map((item) => (
             <TableRow>
               {fields.map(
-                (f) => f.name && <TableDataCell>{item[f.name]?.rendered || item[f.name]?.value}</TableDataCell>,
+                (f) =>
+                  f.name && (
+                    <TableDataCell border px="u2">
+                      {item[f.name]?.rendered || item[f.name]?.value}
+                    </TableDataCell>
+                  ),
               )}
             </TableRow>
           ))}
