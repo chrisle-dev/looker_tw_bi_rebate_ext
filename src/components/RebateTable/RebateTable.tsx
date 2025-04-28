@@ -15,6 +15,7 @@
 import React, { useCallback, useEffect, useContext, useState } from 'react';
 import { Box, Table, TableHead, TableHeaderCell, TableBody, TableRow, TableDataCell } from '@looker/components';
 import { ExtensionContext40 } from '@looker/extension-sdk-react';
+import './RebateTable.scss';
 
 type Field = {
   label: string;
@@ -63,22 +64,22 @@ const RebateTable = () => {
   }, [visualizationData]);
 
   return (
-    <Box>
-      <Table style={{ borderCollapse: 'collapse' }}>
+    <Box p="u4">
+      <Table className="rebate-table">
         <TableHead>
           {[...fields, ...extraFields].map((f) => (
-            <TableHeaderCell px="u2" border>
+            <TableHeaderCell p="u1" border>
               {f.label}
             </TableHeaderCell>
           ))}
         </TableHead>
-        <TableBody fontSize={'medium'}>
+        <TableBody fontSize={'small'}>
           {queryData.map((item) => (
             <TableRow>
               {fields.map(
                 (f) =>
                   f.name && (
-                    <TableDataCell border px="u2">
+                    <TableDataCell border p="u1">
                       {item[f.name]?.rendered || item[f.name]?.value}
                     </TableDataCell>
                   ),
