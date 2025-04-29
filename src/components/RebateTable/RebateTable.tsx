@@ -240,7 +240,7 @@ const RebateTable = () => {
     const getSavedArtifacts = async () => {
       try {
         const artifacts = await coreSDK.ok(
-          coreSDK.artifact({ namespace: artifactNS, key: rbtCustomers.join(','), fields: 'key,value' }),
+          coreSDK.artifact({ namespace: artifactNS, key: rbtCustomers.join(','), fields: 'key,value,version' }),
         );
         console.log('artifacts', artifacts);
         const reduced = artifacts.reduce((acc, cur) => ({ ...acc, [cur.key]: safeParseJSONObj(cur.value) }), {});
@@ -295,8 +295,6 @@ const RebateTable = () => {
                 ))}
                 <TableDataCell border p="u1" textAlign="center" verticalAlign="middle">
                   <Button>Save</Button>
-                  <ButtonBase>Update</ButtonBase>
-                  <ButtonOutline>Save</ButtonOutline>
                 </TableDataCell>
               </TableRow>
             ))}
@@ -314,9 +312,9 @@ const CustomField = ({ field, rowValues, data }: { field: Field; rowValues: Data
   const initValue = data?.[uidKey]?.[field.name] ?? field.defaultValue;
   return (
     <>
-      {field.type === 'text' && <Span>{initValue}</Span>}
+      {field.type === 'text' && <Span style={{ width: '150px' }}>{initValue}</Span>}
       {field.type === 'select' && <Select value={initValue} options={field.options} width={200} />}
-      {field.type === 'inputnumber' && <InputText value={initValue} type="number" min={0} />}
+      {field.type === 'inputnumber' && <InputText value={initValue} type="number" min={0} width={150} />}
     </>
   );
 };
