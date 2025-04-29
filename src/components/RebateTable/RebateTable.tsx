@@ -13,9 +13,25 @@
 // limitations under the License.
 
 import React, { useEffect, useContext, useState } from 'react';
-import { Box, Table, TableHead, TableHeaderCell, TableBody, TableRow, TableDataCell } from '@looker/components';
+import {
+  Box,
+  Table,
+  TableHead,
+  TableHeaderCell,
+  TableBody,
+  TableRow,
+  TableDataCell,
+  Select,
+  InputText,
+  Space,
+  Span,
+} from '@looker/components';
 import { ExtensionContext40 } from '@looker/extension-sdk-react';
 import './RebateTable.scss';
+
+const UNIQUE_IDENTIFIER_FIELD_NAME = 'rebate_to_sku';
+const GROUP_FIELD1_NAME = 'rebate_to_customer';
+const GROUP_FIELD2_NAME = 'rebate_to_category';
 
 type Field = {
   label: string;
@@ -23,6 +39,8 @@ type Field = {
   isCustom?: boolean;
   align?: any;
   defaultValue?: any;
+  type?: 'select' | 'inputnumber' | 'text';
+  options?: { label: string; value: any }[];
 };
 
 type DataItem = {
@@ -32,6 +50,7 @@ type DataItem = {
   rowSpan: number;
   align?: any;
   verticalAlign?: any;
+  isCustom?: boolean;
 };
 
 const customFields: Field[] = [
@@ -41,6 +60,17 @@ const customFields: Field[] = [
     isCustom: true,
     defaultValue: 'fg',
     align: 'left',
+    type: 'select',
+    options: [
+      {
+        label: 'Free Goods (FG)',
+        value: 'fg',
+      },
+      {
+        label: 'Cash Discount (CD)',
+        value: 'cd',
+      },
+    ],
   },
   {
     label: 'Rebate Product Qty',
@@ -48,6 +78,7 @@ const customFields: Field[] = [
     isCustom: true,
     defaultValue: 0,
     align: 'right',
+    type: 'inputnumber',
   },
   {
     label: 'Selling Price',
@@ -55,6 +86,7 @@ const customFields: Field[] = [
     isCustom: true,
     defaultValue: 0,
     align: 'right',
+    type: 'inputnumber',
   },
   {
     label: 'Rebate Amount',
@@ -62,6 +94,7 @@ const customFields: Field[] = [
     isCustom: true,
     defaultValue: 0,
     align: 'right',
+    type: 'text',
   },
   {
     label: 'Balance',
@@ -69,13 +102,17 @@ const customFields: Field[] = [
     isCustom: true,
     defaultValue: 0,
     align: 'right',
+    type: 'text',
   },
 ];
 
 function sortAndGroupQueryData(data: any[], fields: Field[]): DataItem[][] {
+  const gf1 = String(fields.find((f) => f.name.endsWith(GROUP_FIELD1_NAME))?.name);
+  const gf2 = String(fields.find((f) => f.name.endsWith(GROUP_FIELD2_NAME))?.name);
+  const gf3 = String(fields.find((f) => f.name.endsWith(UNIQUE_IDENTIFIER_FIELD_NAME))?.name);
   const sortedItems = data.sort((a, b) => {
-    const ka = a[fields[0].name].value + '_' + a[fields[2].name].value;
-    const kb = b[fields[0].name].value + '_' + b[fields[2].name].value;
+    const ka = `${a[gf1].value}_${a[gf2].value}_${a[gf3].value}`;
+    const kb = `${b[gf1].value}_${b[gf2].value}_${b[gf3].value}`;
     return ka.localeCompare(kb);
   });
   let lastCus = '';
@@ -120,6 +157,7 @@ function sortAndGroupQueryData(data: any[], fields: Field[]): DataItem[][] {
       rowSpan: i > 2 ? 1 : 0,
       verticalAlign: i > 2 ? 'middle' : 'top',
       align: f.align,
+      isCustom: f.isCustom,
     }));
     result.push(values);
   });
@@ -128,20 +166,43 @@ function sortAndGroupQueryData(data: any[], fields: Field[]): DataItem[][] {
   result[sortedItems.length - rowSpanMap['cus']][1].rowSpan = rowSpanMap['cus'];
   result[sortedItems.length - rowSpanMap['cat']][2].rowSpan = rowSpanMap['cat'];
 
-  console.log('fields', fields);
-  console.log('raw data', data);
-  console.log('sortAndGroupQueryData', result);
-
   return result;
 }
 
+function getUniqueRebateCustomers(data: any[], key: string): string[] {
+  return Array.from(new Set(data.map((item) => item[key].value)));
+}
+
+function safeParseJSONObj(content: string) {
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    console.warn('safeParseJSONObj', error);
+    return {};
+  }
+}
+
 const RebateTable = () => {
-  const { extensionSDK, visualizationData } = useContext(ExtensionContext40);
+  const { extensionSDK, visualizationData, coreSDK, tileHostData } = useContext(ExtensionContext40);
   const [fields, setFields] = useState<Field[]>([]);
   const [queryData, setQueryData] = useState<DataItem[][]>([]);
+  const [rbtCustomers, setRbtCustomers] = useState<string[]>([]);
+  const [savedArtifacts, setSavedArtifacts] = useState<any>({});
+  const [artifactNS, setArtifactNS] = useState<string>('');
+  const [errMsg, setErrMsg] = useState('');
 
   useEffect(() => {
     extensionSDK.rendered();
+    const getMe = async () => {
+      try {
+        const me = await coreSDK.ok(coreSDK.me());
+        setArtifactNS(`${me.id}_${tileHostData.dashboardId}_${tileHostData.elementId}`);
+      } catch (error) {
+        setErrMsg('An error occurred while getting your information. Please try again.');
+        console.error('me', error);
+      }
+    };
+    getMe();
   }, []);
 
   useEffect(() => {
@@ -157,41 +218,92 @@ const RebateTable = () => {
         isCustom: false,
       }))
       .concat(customFields);
+    setRbtCustomers(getUniqueRebateCustomers(visualizationData.queryResponse.data, displayedFields[0].name));
     setFields(displayedFields);
     setQueryData(sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields));
   }, [visualizationData]);
 
+  useEffect(() => {
+    if (!artifactNS || !rbtCustomers.length) return;
+    console.log('artifactNS', artifactNS);
+    console.log('rbtCustomers', rbtCustomers);
+    setSavedArtifacts({});
+    const getSavedArtifacts = async () => {
+      try {
+        const artifacts = await coreSDK.ok(
+          coreSDK.artifact({ namespace: artifactNS, key: rbtCustomers.join(','), fields: 'key,value' }),
+        );
+        console.log('artifacts', artifacts);
+        const reduced = artifacts.reduce((acc, cur) => ({ ...acc, [cur.key]: safeParseJSONObj(cur.value) }), {});
+        console.log('reduced artifacts', reduced);
+        setSavedArtifacts(reduced);
+      } catch (error) {
+        setErrMsg('An error occurred while getting artifacts. Please try again.');
+        console.error('artifacts', error);
+      }
+    };
+    getSavedArtifacts();
+  }, [artifactNS, rbtCustomers]);
+
   return (
     <Box p="u4">
-      <Table className="rebate-table">
-        <TableHead>
-          {fields.map((f) => (
-            <TableHeaderCell p="u1" textAlign={f.align} border>
-              {f.label}
+      {errMsg ? (
+        <Space align="center" justify="center">
+          <Span fontSize="xxlarge">{errMsg}</Span>
+        </Space>
+      ) : (
+        <Table className="rebate-table">
+          <TableHead>
+            {fields.map((f) => (
+              <TableHeaderCell p="u1" textAlign={f.align} border>
+                {f.label}
+              </TableHeaderCell>
+            ))}
+            <TableHeaderCell p="u1" textAlign="center" border>
+              Action
             </TableHeaderCell>
-          ))}
-        </TableHead>
-        <TableBody fontSize={'small'}>
-          {queryData.map((dataItems) => (
-            <TableRow>
-              {dataItems
-                .filter((item) => item.rowSpan > 0)
-                .map((item) => (
-                  <TableDataCell
-                    border
-                    p="u1"
-                    textAlign={item.align}
-                    verticalAlign={item.verticalAlign}
-                    rowSpan={item.rowSpan}
-                  >
-                    {item.rendered}
+          </TableHead>
+          <TableBody fontSize={'xsmall'}>
+            {queryData.map((dataItems) => (
+              <TableRow>
+                {dataItems
+                  .filter((item) => item.rowSpan > 0 && !item.isCustom)
+                  .map((item) => (
+                    <TableDataCell
+                      border
+                      p="u1"
+                      textAlign={item.align}
+                      verticalAlign={item.verticalAlign || 'middle'}
+                      rowSpan={item.rowSpan}
+                    >
+                      {item.rendered}
+                    </TableDataCell>
+                  ))}
+                {customFields.map((f) => (
+                  <TableDataCell border p="u1" textAlign={f.align} verticalAlign="middle">
+                    <CustomField field={f} rowValues={dataItems} data={savedArtifacts[dataItems[0].value]} />
                   </TableDataCell>
                 ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
     </Box>
+  );
+};
+
+// savedArtifacts: {"010001 台大醫院":{"114094 JARDIANCE 10MG 30T":{"fg_cd":"fg"}}}
+
+const CustomField = ({ field, rowValues, data }: { field: Field; rowValues: DataItem[]; data: any }) => {
+  const key = rowValues.find((item) => item.name.endsWith(UNIQUE_IDENTIFIER_FIELD_NAME))?.name || '';
+  const initValue = data[key]?.[field.name] ?? field.defaultValue;
+  return (
+    <>
+      {field.type === 'text' && <Span>{initValue}</Span>}
+      {field.type === 'select' && <Select value={initValue} options={field.options} />}
+      {field.type === 'inputnumber' && <InputText value={initValue} type="number" min={0} />}
+    </>
   );
 };
 
