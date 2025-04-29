@@ -22,7 +22,7 @@ import { ExtensionProvider40 } from '@looker/extension-sdk-react';
 import { ComponentsProvider } from '@looker/components';
 import { hot } from 'react-hot-loader/root';
 
-import RebateTable from './components/RebateTable/RebateTable';
+import RebateTable from './RebateTable/RebateTable';
 
 export const App = hot(() => (
   <ExtensionProvider40>
