@@ -118,8 +118,8 @@ function sortAndGroupQueryData(data: any[], fields: Field[]): DataItem[][] {
       value: item[f.name] ? item[f.name].value : f.defaultValue,
       rendered: item[f.name] ? item[f.name].rendered || item[f.name].value : f.defaultValue,
       rowSpan: i > 2 ? 1 : 0,
+      verticalAlign: i > 2 ? 'middle' : 'top',
       align: f.align,
-      verticalAlign: i > 2 ? 'top' : 'middle',
     }));
     result.push(values);
   });
@@ -146,13 +146,15 @@ const RebateTable = () => {
 
   useEffect(() => {
     if (!visualizationData?.queryResponse) return;
-    const displayedFields = [
+    const displayedFields: Field[] = [
       ...visualizationData.queryResponse.fields['dimensions'],
       ...visualizationData.queryResponse.fields['measures'],
     ]
-      .map((item) => ({
+      .map<Field>((item) => ({
         label: item['label_short'],
         name: item['name'],
+        align: item['align'],
+        isCustom: false,
       }))
       .concat(customFields);
     setFields(displayedFields);
@@ -163,7 +165,7 @@ const RebateTable = () => {
     <Box p="u4">
       <Table className="rebate-table">
         <TableHead>
-          {[...fields, ...customFields].map((f) => (
+          {fields.map((f) => (
             <TableHeaderCell p="u1" textAlign={f.align} border>
               {f.label}
             </TableHeaderCell>
@@ -172,20 +174,19 @@ const RebateTable = () => {
         <TableBody fontSize={'small'}>
           {queryData.map((dataItems) => (
             <TableRow>
-              {dataItems.map(
-                (item) =>
-                  item.rowSpan && (
-                    <TableDataCell
-                      border
-                      p="u1"
-                      textAlign={item.align}
-                      verticalAlign={item.verticalAlign}
-                      rowSpan={item.rowSpan}
-                    >
-                      {item.rendered}
-                    </TableDataCell>
-                  ),
-              )}
+              {dataItems
+                .filter((item) => item.rowSpan > 0)
+                .map((item) => (
+                  <TableDataCell
+                    border
+                    p="u1"
+                    textAlign={item.align}
+                    verticalAlign={item.verticalAlign}
+                    rowSpan={item.rowSpan}
+                  >
+                    {item.rendered}
+                  </TableDataCell>
+                ))}
             </TableRow>
           ))}
         </TableBody>
