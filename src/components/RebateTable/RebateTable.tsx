@@ -296,8 +296,8 @@ const RebateTable = () => {
 // savedArtifacts: {"010001 台大醫院":{"114094 JARDIANCE 10MG 30T":{"fg_cd":"fg"}}}
 
 const CustomField = ({ field, rowValues, data }: { field: Field; rowValues: DataItem[]; data: any }) => {
-  const key = rowValues.find((item) => item.name.endsWith(UNIQUE_IDENTIFIER_FIELD_NAME))?.name || '';
-  const initValue = data[key]?.[field.name] ?? field.defaultValue;
+  const uidKey = rowValues.find((item) => item.name.endsWith(UNIQUE_IDENTIFIER_FIELD_NAME))?.value || '';
+  const initValue = data?.[uidKey]?.[field.name] ?? field.defaultValue;
   return (
     <>
       {field.type === 'text' && <Span>{initValue}</Span>}
