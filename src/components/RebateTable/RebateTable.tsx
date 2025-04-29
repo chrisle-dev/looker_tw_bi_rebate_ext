@@ -25,6 +25,9 @@ import {
   InputText,
   Space,
   Span,
+  Button,
+  ButtonBase,
+  ButtonOutline,
 } from '@looker/components';
 import { ExtensionContext40 } from '@looker/extension-sdk-react';
 import './RebateTable.scss';
@@ -193,6 +196,11 @@ const RebateTable = () => {
 
   useEffect(() => {
     extensionSDK.rendered();
+  }, []);
+
+  useEffect(() => {
+    console.log('tileHostData', tileHostData);
+    if (!tileHostData?.dashboardId) return;
     const getMe = async () => {
       try {
         const me = await coreSDK.ok(coreSDK.me());
@@ -203,7 +211,7 @@ const RebateTable = () => {
       }
     };
     getMe();
-  }, []);
+  }, [tileHostData]);
 
   useEffect(() => {
     if (!visualizationData?.queryResponse) return;
@@ -221,6 +229,7 @@ const RebateTable = () => {
     setRbtCustomers(getUniqueRebateCustomers(visualizationData.queryResponse.data, displayedFields[0].name));
     setFields(displayedFields);
     setQueryData(sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields));
+    console.log('visualizationData', visualizationData);
   }, [visualizationData]);
 
   useEffect(() => {
@@ -284,6 +293,11 @@ const RebateTable = () => {
                     <CustomField field={f} rowValues={dataItems} data={savedArtifacts[dataItems[0].value]} />
                   </TableDataCell>
                 ))}
+                <TableDataCell border p="u1" textAlign="center" verticalAlign="middle">
+                  <Button>Save</Button>
+                  <ButtonBase>Update</ButtonBase>
+                  <ButtonOutline>Save</ButtonOutline>
+                </TableDataCell>
               </TableRow>
             ))}
           </TableBody>
@@ -301,7 +315,7 @@ const CustomField = ({ field, rowValues, data }: { field: Field; rowValues: Data
   return (
     <>
       {field.type === 'text' && <Span>{initValue}</Span>}
-      {field.type === 'select' && <Select value={initValue} options={field.options} />}
+      {field.type === 'select' && <Select value={initValue} options={field.options} width={200} />}
       {field.type === 'inputnumber' && <InputText value={initValue} type="number" min={0} />}
     </>
   );
