@@ -9,7 +9,7 @@ application: tw_bi_rebate_extension {
     standalone: yes
   }
   entitlements: {
-    core_api_methods: ["me", "all_artifacts", "update_artifacts"]
+    core_api_methods: ["me", "artifact", "update_artifacts"]
     use_form_submit: yes
     use_embeds: yes
     use_iframes: yes
