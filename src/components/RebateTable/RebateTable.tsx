@@ -21,6 +21,7 @@ type Field = {
   label: string;
   name: string;
   isCustom?: boolean;
+  align?: any;
   defaultValue?: any;
 };
 
@@ -29,6 +30,8 @@ type DataItem = {
   value: any;
   rendered: any;
   rowSpan: number;
+  align?: any;
+  verticalAlign?: any;
 };
 
 const customFields: Field[] = [
@@ -37,30 +40,35 @@ const customFields: Field[] = [
     name: 'fg_cd',
     isCustom: true,
     defaultValue: 'fg',
+    align: 'left',
   },
   {
     label: 'Rebate Product Qty',
     name: 'rebate_product_qty',
     isCustom: true,
     defaultValue: 0,
+    align: 'right',
   },
   {
     label: 'Selling Price',
     name: 'selling_price',
     isCustom: true,
     defaultValue: 0,
+    align: 'right',
   },
   {
     label: 'Rebate Amount',
     name: 'rebate_amount',
     isCustom: true,
     defaultValue: 0,
+    align: 'right',
   },
   {
     label: 'Balance',
     name: 'balance',
     isCustom: true,
     defaultValue: 0,
+    align: 'right',
   },
 ];
 
@@ -105,11 +113,13 @@ function sortAndGroupQueryData(data: any[], fields: Field[]): DataItem[][] {
       rowSpanMap['cat']++;
     }
 
-    const values = fields.map((f, i) => ({
+    const values: DataItem[] = fields.map((f, i) => ({
       name: f.name,
       value: item[f.name] ? item[f.name].value : f.defaultValue,
       rendered: item[f.name] ? item[f.name].rendered || item[f.name].value : f.defaultValue,
       rowSpan: i > 2 ? 1 : 0,
+      align: f.align,
+      verticalAlign: i > 2 ? 'top' : 'middle',
     }));
     result.push(values);
   });
@@ -117,6 +127,11 @@ function sortAndGroupQueryData(data: any[], fields: Field[]): DataItem[][] {
   result[sortedItems.length - rowSpanMap['cus']][0].rowSpan = rowSpanMap['cus'];
   result[sortedItems.length - rowSpanMap['cus']][1].rowSpan = rowSpanMap['cus'];
   result[sortedItems.length - rowSpanMap['cat']][2].rowSpan = rowSpanMap['cat'];
+
+  console.log('fields', fields);
+  console.log('raw data', data);
+  console.log('sortAndGroupQueryData', result);
+
   return result;
 }
 
@@ -149,7 +164,7 @@ const RebateTable = () => {
       <Table className="rebate-table">
         <TableHead>
           {[...fields, ...customFields].map((f) => (
-            <TableHeaderCell p="u1" border>
+            <TableHeaderCell p="u1" textAlign={f.align} border>
               {f.label}
             </TableHeaderCell>
           ))}
@@ -160,7 +175,13 @@ const RebateTable = () => {
               {dataItems.map(
                 (item) =>
                   item.rowSpan && (
-                    <TableDataCell border p="u1" rowSpan={item.rowSpan}>
+                    <TableDataCell
+                      border
+                      p="u1"
+                      textAlign={item.align}
+                      verticalAlign={item.verticalAlign}
+                      rowSpan={item.rowSpan}
+                    >
                       {item.rendered}
                     </TableDataCell>
                   ),
