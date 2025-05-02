@@ -152,7 +152,7 @@ const RebateTable = () => {
           <Space justify="end" py="u2">
             <Button>Save</Button>
           </Space>
-          <Box height="calc(100% - 50px)">
+          <Box height="calc(100% - 50px)" overflow="auto">
             <Table className="rebate-table" mt="u2">
               <TableHead>
                 {fields.map((f) => (
