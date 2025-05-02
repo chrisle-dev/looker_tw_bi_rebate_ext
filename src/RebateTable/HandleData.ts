@@ -165,12 +165,12 @@ export function calculateRebateAmtAndBalance(
       if (!artifactsData[skuData[i].mainGroup]) {
         artifactsData[skuData[i].mainGroup] = {};
       }
-      if (!artifactsData[skuData[i].mainGroup][skuData[i].uidKey]) {
-        artifactsData[skuData[i].mainGroup][skuData[i].uidKey] = {};
-      }
       balance = skuData[i].woRebate;
     }
     lastGroup = skuData[i].mainGroup;
+    if (!artifactsData[skuData[i].mainGroup][skuData[i].uidKey]) {
+      artifactsData[skuData[i].mainGroup][skuData[i].uidKey] = {};
+    }
     const artifactValue = artifactsData[skuData[i].mainGroup][skuData[i].uidKey];
     artifactValue['rebate_amount'] =
       (artifactValue['fg_cd'] === 'CD'
