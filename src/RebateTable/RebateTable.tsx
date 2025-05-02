@@ -142,17 +142,17 @@ const RebateTable = () => {
   }, [artifactNS, rbtCustomers]);
 
   return (
-    <Box p="u4">
+    <Box p="u4" height="100%">
       {errMsg ? (
         <Space align="center" justify="center">
           <Span fontSize="xxlarge">{errMsg}</Span>
         </Space>
       ) : (
-        <div>
-          <Space justify="end">
+        <Box height="100%">
+          <Space justify="end" py="u2">
             <Button>Save</Button>
           </Space>
-          <Box>
+          <Box height="calc(100% - 50px)">
             <Table className="rebate-table" mt="u2">
               <TableHead>
                 {fields.map((f) => (
@@ -193,7 +193,7 @@ const RebateTable = () => {
               </TableBody>
             </Table>
           </Box>
-        </div>
+        </Box>
       )}
     </Box>
   );

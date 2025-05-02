@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import React from 'react'
-import ReactDOM from 'react-dom'
-import { App } from './App'
+import React from 'react';
+import ReactDOM from 'react-dom';
+import { App } from './App';
 
 window.addEventListener('DOMContentLoaded', (_) => {
-  const root = document.createElement('div')
-  document.body.appendChild(root)
-  ReactDOM.render(<App />, root)
-})
+  const root = document.createElement('div');
+  root.style.height = '100%';
+  document.body.appendChild(root);
+  ReactDOM.render(<App />, root);
+});

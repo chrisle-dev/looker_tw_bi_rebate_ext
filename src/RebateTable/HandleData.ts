@@ -170,13 +170,12 @@ export function calculateRebateAmtAndBalance(
       }
       balance = skuData[i].woRebate;
     }
+    lastGroup = skuData[i].mainGroup;
     const artifactValue = artifactsData[skuData[i].mainGroup][skuData[i].uidKey];
     artifactValue['rebate_amount'] =
-      (artifactValue['fg_cd'] === 'FG'
-        ? artifactValue['rebate_product_qty'] * artifactValue['selling_price']
-        : artifactValue['fg_cd'] === 'CD'
-          ? artifactValue['rebate_product_qty']
-          : 0) || 0;
+      (artifactValue['fg_cd'] === 'CD'
+        ? artifactValue['rebate_product_qty']
+        : artifactValue['rebate_product_qty'] * artifactValue['selling_price']) || 0;
     balance -= artifactValue['rebate_amount'];
     artifactValue['balance'] = balance;
   }
