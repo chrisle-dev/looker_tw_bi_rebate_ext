@@ -148,50 +148,52 @@ const RebateTable = () => {
           <Span fontSize="xxlarge">{errMsg}</Span>
         </Space>
       ) : (
-        <Box>
+        <div>
           <Space justify="end">
             <Button>Save</Button>
           </Space>
-          <Table className="rebate-table" mt="u2">
-            <TableHead>
-              {fields.map((f) => (
-                <TableHeaderCell p="u1" textAlign={f.align} border>
-                  {f.label}
-                </TableHeaderCell>
-              ))}
-            </TableHead>
-            <TableBody fontSize={'xsmall'}>
-              {queryData.map((skuData) => (
-                <TableRow>
-                  {skuData.fieldsData
-                    .filter((item) => item.rowSpan > 0 && !item.isCustom)
-                    .map((item) => (
-                      <TableDataCell
-                        border
-                        p="u1"
-                        textAlign={item.align}
-                        verticalAlign={item.verticalAlign || 'middle'}
-                        rowSpan={item.rowSpan}
-                      >
-                        {item.rendered}
+          <Box>
+            <Table className="rebate-table" mt="u2">
+              <TableHead>
+                {fields.map((f) => (
+                  <TableHeaderCell p="u1" textAlign={f.align} border>
+                    {f.label}
+                  </TableHeaderCell>
+                ))}
+              </TableHead>
+              <TableBody fontSize={'xsmall'}>
+                {queryData.map((skuData) => (
+                  <TableRow>
+                    {skuData.fieldsData
+                      .filter((item) => item.rowSpan > 0 && !item.isCustom)
+                      .map((item) => (
+                        <TableDataCell
+                          border
+                          p="u1"
+                          textAlign={item.align}
+                          verticalAlign={item.verticalAlign || 'middle'}
+                          rowSpan={item.rowSpan}
+                        >
+                          {item.rendered}
+                        </TableDataCell>
+                      ))}
+                    {customFields.map((f) => (
+                      <TableDataCell border p="u1" textAlign={f.align} verticalAlign="middle">
+                        <CustomField
+                          field={f}
+                          uidKey={skuData.uidKey}
+                          mainGroup={skuData.mainGroup}
+                          data={savedArtifacts[skuData.mainGroup]?.[skuData.uidKey]}
+                          saveDataLocal={saveDataLocal}
+                        />
                       </TableDataCell>
                     ))}
-                  {customFields.map((f) => (
-                    <TableDataCell border p="u1" textAlign={f.align} verticalAlign="middle">
-                      <CustomField
-                        field={f}
-                        uidKey={skuData.uidKey}
-                        mainGroup={skuData.mainGroup}
-                        data={savedArtifacts[skuData.mainGroup]?.[skuData.uidKey]}
-                        saveDataLocal={saveDataLocal}
-                      />
-                    </TableDataCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Box>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        </div>
       )}
     </Box>
   );
@@ -219,18 +221,20 @@ const CustomField = ({
       {field.type === 'text' && <Span>{initValue}</Span>}
       {field.type === 'select' && (
         <Select
+          width={200}
+          textAlign={field.align}
           value={initValue}
           options={field.options}
-          width={200}
           onChange={(value) => saveDataLocal(mainGroup, uidKey, { ...data, [field.name]: value })}
         />
       )}
       {field.type === 'inputnumber' && (
         <InputText
-          value={initValue}
           type="number"
           min={0}
           width={150}
+          style={{ textAlign: field.align }}
+          value={initValue}
           onChange={(e) => saveDataLocal(mainGroup, uidKey, { ...data, [field.name]: Number(e.target.value || 0) })}
         />
       )}

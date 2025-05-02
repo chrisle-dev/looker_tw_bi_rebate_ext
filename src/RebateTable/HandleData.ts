@@ -174,7 +174,9 @@ export function calculateRebateAmtAndBalance(
     artifactValue['rebate_amount'] =
       (artifactValue['fg_cd'] === 'FG'
         ? artifactValue['rebate_product_qty'] * artifactValue['selling_price']
-        : artifactValue['rebate_product_qty']) || 0;
+        : artifactValue['fg_cd'] === 'CD'
+          ? artifactValue['rebate_product_qty']
+          : 0) || 0;
     balance -= artifactValue['rebate_amount'];
     artifactValue['balance'] = balance;
   }
