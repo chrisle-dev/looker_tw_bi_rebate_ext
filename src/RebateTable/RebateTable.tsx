@@ -118,8 +118,6 @@ const RebateTable = () => {
   // load savedArtifacts
   useEffect(() => {
     if (!artifactNS || !rbtCustomers.length) return;
-    console.log('artifactNS', artifactNS);
-    console.log('rbtCustomers', rbtCustomers);
     setSavedArtifacts({});
     const getSavedArtifacts = async () => {
       try {
@@ -216,7 +214,7 @@ const RebateToCustomer = React.memo(function RebateToCustomer({
   savedData: Record<string, any>;
 }) {
   const [initValues, setInitValues] = useState(savedData || {});
-
+  console.log('initValues', customerInfo.customer, initValues);
   const saveDataLocal = (uid: string, data: Record<string, any>) => {
     const newData = { ...initValues };
     newData[uid] = {
@@ -249,13 +247,18 @@ const RebateToCustomer = React.memo(function RebateToCustomer({
             ),
           )}
           {customFields.map((f) => (
-            <TableDataCell border p="u1" textAlign={f.align} verticalAlign="middle">
+            <TableDataCell
+              border
+              p="u1"
+              textAlign={f.align}
+              verticalAlign="middle"
+              key={`${customerInfo.customer}_${skuInfo.uidKey}_${f.name}`}
+            >
               <CustomField
                 field={f}
                 uidKey={skuInfo.uidKey}
                 data={initValues[skuInfo.uidKey]}
                 saveDataLocal={saveDataLocal}
-                key={`${customerInfo.customer}_${skuInfo.uidKey}_${f.name}`}
               />
             </TableDataCell>
           ))}
@@ -270,17 +273,14 @@ const CustomField = ({
   uidKey,
   data,
   saveDataLocal,
-  key,
 }: {
   field: Field;
   uidKey: string;
   data: any;
   saveDataLocal: (uid: string, data: Record<string, any>) => void;
-  key: string;
 }) => {
-  console.log(key, data);
-  data = data || {};
-  const initValue = data[field.name] ?? field.defaultValue;
+  console.log(uidKey, data);
+  const initValue = data?.[field.name] ?? field.defaultValue;
   return (
     <>
       {field.type === 'text' && <Span>{initValue}</Span>}
