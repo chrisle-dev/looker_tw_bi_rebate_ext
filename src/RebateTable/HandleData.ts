@@ -114,7 +114,7 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
         result = [];
       }
       customerResult.push({
-        customer: lastCus,
+        customer: cus,
         woRebate: woRebate || 0,
         skuInfos: result,
       });
