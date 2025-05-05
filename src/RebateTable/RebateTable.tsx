@@ -253,7 +253,7 @@ const RebateToCustomer = React.memo(function RebateToCustomer({
               <CustomField
                 field={f}
                 uidKey={skuInfo.uidKey}
-                data={savedData[customerInfo.customer]?.[skuInfo.uidKey]}
+                data={initValues[customerInfo.customer]?.[skuInfo.uidKey]}
                 saveDataLocal={saveDataLocal}
                 key={f.name}
               />
