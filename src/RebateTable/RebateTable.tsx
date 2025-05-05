@@ -212,7 +212,7 @@ const RebateToCustomer = React.memo(function RebateToCustomer({
   customerInfo: CustomeInfo;
   savedData: Record<string, any>;
 }) {
-  const [initValues, setInitValues] = useState(savedData || {});
+  const [initValues, setInitValues] = useState(savedData);
   console.log('initValues', customerInfo.customer, initValues);
   const saveDataLocal = (uid: string, data: Record<string, any>) => {
     const newData = { ...initValues };
@@ -256,7 +256,7 @@ const RebateToCustomer = React.memo(function RebateToCustomer({
               <CustomField
                 field={f}
                 uidKey={skuInfo.uidKey}
-                data={initValues[skuInfo.uidKey]}
+                data={initValues?.[skuInfo.uidKey]}
                 saveDataLocal={saveDataLocal}
               />
             </TableDataCell>
