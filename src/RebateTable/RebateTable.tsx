@@ -213,7 +213,11 @@ const RebateToCustomer = React.memo(function RebateToCustomer({
   savedData: Record<string, any>;
 }) {
   const [initValues, setInitValues] = useState(savedData);
-  console.log('initValues', customerInfo.customer, savedData, initValues);
+
+  useEffect(() => {
+    setInitValues(savedData);
+  }, [savedData]);
+
   const saveDataLocal = (uid: string, data: Record<string, any>) => {
     const newData = { ...initValues };
     newData[uid] = {
