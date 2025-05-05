@@ -105,18 +105,19 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
   sortedItems.forEach((item, index) => {
     const cus = item[gf1].value;
     const cat = item[gf2].value;
+    const woRebate = item[gf1b].value;
 
     if (cus !== lastCus) {
       if (index > 0) {
         result[index - rowSpanMap['cus']].fieldsData[gf1].rowSpan = rowSpanMap['cus'];
         result[index - rowSpanMap['cus']].fieldsData[gf1b].rowSpan = rowSpanMap['cus'];
-        customerResult.push({
-          customer: lastCus,
-          woRebate: result[0].fieldsData[gf1b]?.value || 0,
-          skuInfos: result,
-        });
         result = [];
       }
+      customerResult.push({
+        customer: lastCus,
+        woRebate: woRebate || 0,
+        skuInfos: result,
+      });
       rowSpanMap['cus'] = 1;
       lastCus = cus;
       lastCat = '';
