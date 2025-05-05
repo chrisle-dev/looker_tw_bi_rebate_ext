@@ -99,7 +99,6 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
     cat: 0,
   };
 
-  let result: SkuInfo[] = [];
   const customerResult: CustomeInfo[] = [];
 
   sortedItems.forEach((item, index) => {
@@ -109,14 +108,13 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
 
     if (cus !== lastCus) {
       if (index > 0) {
-        result[index - rowSpanMap['cus']].fieldsData[gf1].rowSpan = rowSpanMap['cus'];
-        result[index - rowSpanMap['cus']].fieldsData[gf1b].rowSpan = rowSpanMap['cus'];
-        result = [];
+        customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1].rowSpan = rowSpanMap['cus'];
+        customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1b].rowSpan = rowSpanMap['cus'];
       }
       customerResult.push({
         customer: cus,
         woRebate: woRebate || 0,
-        skuInfos: result,
+        skuInfos: [],
       });
       rowSpanMap['cus'] = 1;
       lastCus = cus;
@@ -126,8 +124,10 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
     }
 
     if (cat !== lastCat) {
-      if (index > 0) {
-        result[index - rowSpanMap['cat']].fieldsData[gf2].rowSpan = rowSpanMap['cat'];
+      const skuLen = customerResult[customerResult.length - 1].skuInfos.length;
+      if (skuLen > 0) {
+        customerResult[customerResult.length - 1].skuInfos[skuLen - rowSpanMap['cat']].fieldsData[gf2].rowSpan =
+          rowSpanMap['cat'];
       }
       rowSpanMap['cat'] = 1;
       lastCat = cat;
@@ -150,15 +150,19 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
       {},
     );
 
-    result.push({
+    customerResult[customerResult.length - 1].skuInfos.push({
       uidKey: values[gf3]?.value || '',
       fieldsData: values,
     });
   });
-  console.log('customerResult', customerResult);
+
   customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1].rowSpan = rowSpanMap['cus'];
   customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1b].rowSpan = rowSpanMap['cus'];
-  customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf2].rowSpan = rowSpanMap['cat'];
+  customerResult[customerResult.length - 1].skuInfos[
+    customerResult[customerResult.length - 1].skuInfos.length - rowSpanMap['cat']
+  ].fieldsData[gf2].rowSpan = rowSpanMap['cat'];
+
+  console.log('customerResult', customerResult);
 
   return customerResult;
 }
