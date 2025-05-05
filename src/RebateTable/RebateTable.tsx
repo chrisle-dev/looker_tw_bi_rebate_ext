@@ -255,7 +255,7 @@ const RebateToCustomer = React.memo(function RebateToCustomer({
                 uidKey={skuInfo.uidKey}
                 data={initValues[skuInfo.uidKey]}
                 saveDataLocal={saveDataLocal}
-                key={f.name}
+                key={`${customerInfo.customer}_${skuInfo.uidKey}_${f.name}`}
               />
             </TableDataCell>
           ))}
@@ -270,12 +270,15 @@ const CustomField = ({
   uidKey,
   data,
   saveDataLocal,
+  key,
 }: {
   field: Field;
   uidKey: string;
   data: any;
   saveDataLocal: (uid: string, data: Record<string, any>) => void;
+  key: string;
 }) => {
+  console.log(key, data);
   data = data || {};
   const initValue = data[field.name] ?? field.defaultValue;
   return (
