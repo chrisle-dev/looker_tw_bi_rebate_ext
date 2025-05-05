@@ -1,3 +1,5 @@
+import { IUpdateArtifact } from '@looker/sdk';
+
 const UNIQUE_IDENTIFIER_FIELD_NAME = 'rebate_to_sku';
 const GROUP_FIELD1_NAME = 'rebate_to_customer';
 const GROUP_FIELD1B_NAME = 'weighted_outstanding_rebate';
@@ -33,6 +35,8 @@ export type SkuInfo = {
   uidKey: string;
   fieldsData: Record<string, FieldData>;
 };
+
+export type NormalizedArtifacts = Record<string, { value: Record<string, any>; version: number }>;
 
 export const CUSTOM_FIELDS: Field[] = [
   {
@@ -177,17 +181,20 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
 
 export function calculateRebateAmtAndBalance(
   customerInfos: CustomeInfo[],
-  customFieldsData: Record<string, Record<string, any>>,
-): Record<string, Record<string, any>> {
+  customFieldsData: NormalizedArtifacts,
+): NormalizedArtifacts {
   const result = { ...customFieldsData };
   customerInfos.forEach((customerInfo) => {
     result[customerInfo.customer] = {
       ...result[customerInfo.customer],
     };
+    if (!result[customerInfo.customer].value) {
+      result[customerInfo.customer].value = {};
+    }
     let balance = customerInfo.woRebate;
     customerInfo.skuInfos.forEach((skuInfo) => {
       const artifactValue = {
-        ...result[customerInfo.customer][skuInfo.uidKey],
+        ...result[customerInfo.customer].value[skuInfo.uidKey],
       };
       artifactValue['rebate_amount'] =
         (artifactValue['fg_cd'] === 'CD'
@@ -195,7 +202,7 @@ export function calculateRebateAmtAndBalance(
           : artifactValue['rebate_product_qty'] * artifactValue['selling_price']) || 0;
       balance -= artifactValue['rebate_amount'];
       artifactValue['balance'] = balance;
-      result[customerInfo.customer][skuInfo.uidKey] = artifactValue;
+      result[customerInfo.customer].value[skuInfo.uidKey] = artifactValue;
     });
   });
 
@@ -218,4 +225,29 @@ export function safeParseJSONObj(content: string) {
 export function pick(obj: Record<string, any>, paths: string[]): Record<string, any> {
   if (!obj) return {};
   return paths.reduce((acc, cur) => ({ ...acc, [cur]: obj[cur] }), {});
+}
+
+// {"010001 台大醫院":{"114094 JARDIANCE 10MG 30T":{"fg_cd":"fg"}}}
+export function getSavableArtifacts(
+  updates: NormalizedArtifacts,
+  current: NormalizedArtifacts,
+): Partial<IUpdateArtifact[]> {
+  const result: Partial<IUpdateArtifact[]> = [];
+  Object.keys(updates).forEach((customer) => {
+    const changedSkus = updates[customer].value;
+    const currentSkus = current[customer].value;
+    const tobeUpdated: Record<string, any> = {};
+    Object.keys(changedSkus).forEach((sku) => {
+      tobeUpdated[sku] = {
+        ...currentSkus?.[sku],
+        ...changedSkus[sku],
+      };
+    });
+    result.push({
+      key: customer,
+      value: JSON.stringify(pick(tobeUpdated, SAVABLE_FIELDS)),
+      version: current[customer].version,
+    });
+  });
+  return result;
 }
