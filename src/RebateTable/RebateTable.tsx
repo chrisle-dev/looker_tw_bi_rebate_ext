@@ -118,7 +118,6 @@ const RebateTable = () => {
   // load savedArtifacts
   useEffect(() => {
     if (!artifactNS || !rbtCustomers.length) return;
-    setSavedArtifacts({});
     const getSavedArtifacts = async () => {
       try {
         const artifacts = await coreSDK.ok(
@@ -279,7 +278,6 @@ const CustomField = ({
   data: any;
   saveDataLocal: (uid: string, data: Record<string, any>) => void;
 }) => {
-  console.log(uidKey, data);
   const initValue = data?.[field.name] ?? field.defaultValue;
   return (
     <>
