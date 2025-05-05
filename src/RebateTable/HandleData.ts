@@ -6,7 +6,6 @@ const GROUP_FIELD2_NAME = 'rebate_to_category';
 export type Field = {
   label: string;
   name: string;
-  isCustom?: boolean;
   align?: any;
   defaultValue?: any;
   type?: 'select' | 'inputnumber' | 'text';
@@ -23,18 +22,21 @@ export type FieldData = {
   isCustom?: boolean;
 };
 
-export type SkuData = {
-  mainGroup: string;
-  uidKey: string;
+export type CustomeInfo = {
+  customer: string;
   woRebate: number;
-  fieldsData: FieldData[];
+  skuInfos: SkuInfo[];
+};
+
+export type SkuInfo = {
+  uidKey: string;
+  fieldsData: Record<string, FieldData>;
 };
 
 export const customFields: Field[] = [
   {
     label: 'FG/CD',
     name: 'fg_cd',
-    isCustom: true,
     defaultValue: 'FG',
     align: 'left',
     type: 'select',
@@ -52,7 +54,6 @@ export const customFields: Field[] = [
   {
     label: 'Rebate Product Qty',
     name: 'rebate_product_qty',
-    isCustom: true,
     defaultValue: 0,
     align: 'right',
     type: 'inputnumber',
@@ -60,7 +61,6 @@ export const customFields: Field[] = [
   {
     label: 'Selling Price',
     name: 'selling_price',
-    isCustom: true,
     defaultValue: 0,
     align: 'right',
     type: 'inputnumber',
@@ -68,7 +68,6 @@ export const customFields: Field[] = [
   {
     label: 'Rebate Amount',
     name: 'rebate_amount',
-    isCustom: true,
     defaultValue: 0,
     align: 'right',
     type: 'text',
@@ -76,14 +75,13 @@ export const customFields: Field[] = [
   {
     label: 'Balance',
     name: 'balance',
-    isCustom: true,
     defaultValue: 0,
     align: 'right',
     type: 'text',
   },
 ];
 
-export function sortAndGroupQueryData(data: any[], fields: Field[]): SkuData[] {
+export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo[] {
   const gf1 = String(fields.find((f) => f.name.endsWith(GROUP_FIELD1_NAME))?.name);
   const gf1b = String(fields.find((f) => f.name.endsWith(GROUP_FIELD1B_NAME))?.name);
   const gf2 = String(fields.find((f) => f.name.endsWith(GROUP_FIELD2_NAME))?.name);
@@ -101,7 +99,8 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): SkuData[] {
     cat: 0,
   };
 
-  const result: SkuData[] = [];
+  let result: SkuInfo[] = [];
+  const customerResult: CustomeInfo[] = [];
 
   sortedItems.forEach((item, index) => {
     const cus = item[gf1].value;
@@ -109,8 +108,14 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): SkuData[] {
 
     if (cus !== lastCus) {
       if (index > 0) {
-        result[index - rowSpanMap['cus']].fieldsData[0].rowSpan = rowSpanMap['cus'];
-        result[index - rowSpanMap['cus']].fieldsData[1].rowSpan = rowSpanMap['cus'];
+        result[index - rowSpanMap['cus']].fieldsData[gf1].rowSpan = rowSpanMap['cus'];
+        result[index - rowSpanMap['cus']].fieldsData[gf1b].rowSpan = rowSpanMap['cus'];
+        customerResult.push({
+          customer: lastCus,
+          woRebate: result[0].fieldsData[gf1b]?.value || 0,
+          skuInfos: result,
+        });
+        result = [];
       }
       rowSpanMap['cus'] = 1;
       lastCus = cus;
@@ -121,7 +126,7 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): SkuData[] {
 
     if (cat !== lastCat) {
       if (index > 0) {
-        result[index - rowSpanMap['cat']].fieldsData[2].rowSpan = rowSpanMap['cat'];
+        result[index - rowSpanMap['cat']].fieldsData[gf2].rowSpan = rowSpanMap['cat'];
       }
       rowSpanMap['cat'] = 1;
       lastCat = cat;
@@ -129,57 +134,59 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): SkuData[] {
       rowSpanMap['cat']++;
     }
 
-    const values: FieldData[] = fields.map((f, i) => ({
-      name: f.name,
-      value: item[f.name] ? item[f.name].value : f.defaultValue,
-      rendered: item[f.name] ? item[f.name].rendered || item[f.name].value : f.defaultValue,
-      rowSpan: i > 2 ? 1 : 0,
-      verticalAlign: i > 2 ? 'middle' : 'top',
-      align: f.align,
-      isCustom: f.isCustom,
-    }));
+    const values = fields.reduce<Record<string, FieldData>>(
+      (acc, cur, i) => ({
+        ...acc,
+        [cur.name]: {
+          name: cur.name,
+          value: item[cur.name] ? item[cur.name].value : cur.defaultValue,
+          rendered: item[cur.name] ? item[cur.name].rendered || item[cur.name].value : cur.defaultValue,
+          rowSpan: i > 2 ? 1 : 0,
+          verticalAlign: i > 2 ? 'middle' : 'top',
+          align: cur.align,
+        },
+      }),
+      {},
+    );
 
     result.push({
-      mainGroup: cus,
-      woRebate: values.find((item) => item.name === gf1b)?.value || 0,
-      uidKey: values.find((item) => item.name === gf3)?.value || '',
+      uidKey: values[gf3]?.value || '',
       fieldsData: values,
     });
   });
 
-  result[sortedItems.length - rowSpanMap['cus']].fieldsData[0].rowSpan = rowSpanMap['cus'];
-  result[sortedItems.length - rowSpanMap['cus']].fieldsData[1].rowSpan = rowSpanMap['cus'];
-  result[sortedItems.length - rowSpanMap['cat']].fieldsData[2].rowSpan = rowSpanMap['cat'];
+  customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1].rowSpan = rowSpanMap['cus'];
+  customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1b].rowSpan = rowSpanMap['cus'];
+  customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf2].rowSpan = rowSpanMap['cat'];
 
-  return result;
+  return customerResult;
 }
 
 export function calculateRebateAmtAndBalance(
-  skuData: SkuData[],
-  artifactsData: Record<string, Record<string, any>>,
+  customerInfos: CustomeInfo[],
+  customFieldsData: Record<string, Record<string, any>>,
 ): Record<string, Record<string, any>> {
-  let balance = 0;
-  let lastGroup = '';
-  for (let i = 0; i < skuData.length; i++) {
-    if (lastGroup !== skuData[i].mainGroup) {
-      if (!artifactsData[skuData[i].mainGroup]) {
-        artifactsData[skuData[i].mainGroup] = {};
-      }
-      balance = skuData[i].woRebate;
-    }
-    lastGroup = skuData[i].mainGroup;
-    if (!artifactsData[skuData[i].mainGroup][skuData[i].uidKey]) {
-      artifactsData[skuData[i].mainGroup][skuData[i].uidKey] = {};
-    }
-    const artifactValue = artifactsData[skuData[i].mainGroup][skuData[i].uidKey];
-    artifactValue['rebate_amount'] =
-      (artifactValue['fg_cd'] === 'CD'
-        ? artifactValue['rebate_product_qty']
-        : artifactValue['rebate_product_qty'] * artifactValue['selling_price']) || 0;
-    balance -= artifactValue['rebate_amount'];
-    artifactValue['balance'] = balance;
-  }
-  return artifactsData;
+  const result = { ...customFieldsData };
+  customerInfos.forEach((customerInfo) => {
+    result[customerInfo.customer] = {
+      ...result[customerInfo.customer],
+    };
+    let balance = customerInfo.woRebate;
+    customerInfo.skuInfos.forEach((skuInfo) => {
+      const artifactValue = {
+        ...result[customerInfo.customer][skuInfo.uidKey],
+      };
+      artifactValue['rebate_amount'] =
+        (artifactValue['fg_cd'] === 'CD'
+          ? artifactValue['rebate_product_qty']
+          : artifactValue['rebate_product_qty'] * artifactValue['selling_price']) || 0;
+      balance -= artifactValue['rebate_amount'];
+      artifactValue['balance'] = balance;
+      result[customerInfo.customer][skuInfo.uidKey] = artifactValue;
+    });
+  });
+
+  return result;
 }
 
 export function getUniqueRebateCustomers(data: any[], key: string): string[] {
