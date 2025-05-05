@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import React, { useEffect, useContext, useState } from 'react';
+import React, { useEffect, useContext, useState, memo, useRef, useCallback } from 'react';
 import {
   Box,
   Table,
@@ -35,10 +35,12 @@ import {
   SkuInfo,
   CustomeInfo,
   calculateRebateAmtAndBalance,
-  customFields,
+  CUSTOM_FIELDS,
   getUniqueRebateCustomers,
   safeParseJSONObj,
   sortAndGroupQueryData,
+  pick,
+  SAVABLE_FIELDS,
 } from './HandleData';
 
 const RebateTable = () => {
@@ -49,6 +51,7 @@ const RebateTable = () => {
   const [savedArtifacts, setSavedArtifacts] = useState<Record<string, Record<string, any>>>({});
   const [artifactNS, setArtifactNS] = useState<string>('');
   const [errMsg, setErrMsg] = useState('');
+  const artifactsRef = useRef<Record<string, Record<string, any>>>({});
 
   // const updateArtifacts = async (data: Partial<IUpdateArtifact[]>) => {
   //   try {
@@ -66,15 +69,23 @@ const RebateTable = () => {
   //   }
   // };
 
-  const saveDataLocal = (group: string, uid: string, data: Record<string, any>) => {
-    const newArtifacts = { ...savedArtifacts };
-    newArtifacts[group] = {
-      ...(newArtifacts[group] || {}),
-      [uid]: data,
+  const saveRefArtifacts = useCallback((customer: string, uid: string, data: Record<string, any>) => {
+    const savableData = pick(data, SAVABLE_FIELDS);
+    artifactsRef.current = {
+      ...artifactsRef.current,
+      [customer]: {
+        ...artifactsRef.current[customer],
+        [uid]: {
+          ...artifactsRef.current[customer]?.[uid],
+          ...savableData,
+        },
+      },
     };
-    const calculated = calculateRebateAmtAndBalance(customerInfos, newArtifacts);
-    console.log('calculated artifacts', calculated);
-    setSavedArtifacts(calculated);
+  }, []);
+
+  const updateArtifacts = async () => {
+    console.log(artifactsRef.current);
+    artifactsRef.current = {};
   };
 
   useEffect(() => {
@@ -93,7 +104,7 @@ const RebateTable = () => {
       align: item['align'],
       isCustom: false,
     }));
-    // .concat(customFields);
+    // .concat(CUSTOM_FIELDS);
     setRbtCustomers(getUniqueRebateCustomers(visualizationData.queryResponse.data, displayedFields[0].name));
     setFields(displayedFields);
     setCustomerInfos(sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields));
@@ -146,12 +157,12 @@ const RebateTable = () => {
       ) : (
         <Box height="100%">
           <Space justify="end" py="u2">
-            <Button>Save</Button>
+            <Button onClick={updateArtifacts}>Save</Button>
           </Space>
           <Box height="calc(100% - 50px)" overflow="auto">
             <Table className="rebate-table" mt="u2">
               <TableHead>
-                {[...fields, ...customFields].map((f) => (
+                {[...fields, ...CUSTOM_FIELDS].map((f) => (
                   <TableHeaderCell p="u1" textAlign={f.align} key={f.name} border>
                     {f.label}
                   </TableHeaderCell>
@@ -159,37 +170,12 @@ const RebateTable = () => {
               </TableHead>
               <TableBody fontSize={'xsmall'}>
                 {customerInfos.map((customerInfo) => (
-                  // <TableRow>
-                  //   {skuData.fieldsData
-                  //     .filter((item) => item.rowSpan > 0 && !item.isCustom)
-                  //     .map((item) => (
-                  //       <TableDataCell
-                  //         border
-                  //         p="u1"
-                  //         textAlign={item.align}
-                  //         verticalAlign={item.verticalAlign || 'middle'}
-                  //         rowSpan={item.rowSpan}
-                  //       >
-                  //         {item.rendered}
-                  //       </TableDataCell>
-                  //     ))}
-                  //   {customFields.map((f) => (
-                  //     <TableDataCell border p="u1" textAlign={f.align} verticalAlign="middle">
-                  //       <CustomField
-                  //         field={f}
-                  //         uidKey={skuData.uidKey}
-                  //         customer={skuData.customer}
-                  //         data={savedArtifacts[skuData.customer]?.[skuData.uidKey]}
-                  //         saveDataLocal={saveDataLocal}
-                  //       />
-                  //     </TableDataCell>
-                  //   ))}
-                  // </TableRow>
                   <RebateToCustomer
                     fields={fields}
                     customerInfo={customerInfo}
                     savedData={savedArtifacts[customerInfo.customer]}
                     key={customerInfo.customer}
+                    saveArtifactsLocal={saveRefArtifacts}
                   />
                 ))}
               </TableBody>
@@ -203,15 +189,18 @@ const RebateTable = () => {
 
 // savedArtifacts: {"010001 台大醫院":{"114094 JARDIANCE 10MG 30T":{"fg_cd":"fg"}}}
 
-const RebateToCustomer = React.memo(function RebateToCustomer({
+const RebateToCustomer = memo(function RebateToCustomer({
   fields,
   customerInfo,
   savedData,
+  saveArtifactsLocal,
 }: {
   fields: Field[];
   customerInfo: CustomeInfo;
   savedData: Record<string, any>;
+  saveArtifactsLocal: (customer: string, uid: string, data: Record<string, any>) => void;
 }) {
+  console.log('render RebateToCustomer');
   const [initValues, setInitValues] = useState(savedData);
 
   useEffect(() => {
@@ -227,6 +216,7 @@ const RebateToCustomer = React.memo(function RebateToCustomer({
     const calculated = calculateRebateAmtAndBalance([customerInfo], { [customerInfo.customer]: newData });
     console.log('calculated data local', calculated);
     setInitValues(calculated[customerInfo.customer]);
+    saveArtifactsLocal(customerInfo.customer, uid, newData[uid]);
   };
 
   return (
@@ -249,7 +239,7 @@ const RebateToCustomer = React.memo(function RebateToCustomer({
               <></>
             ),
           )}
-          {customFields.map((f) => (
+          {CUSTOM_FIELDS.map((f) => (
             <TableDataCell
               border
               p="u1"
@@ -259,7 +249,7 @@ const RebateToCustomer = React.memo(function RebateToCustomer({
             >
               <CustomField
                 field={f}
-                uidKey={skuInfo.uidKey}
+                uid={skuInfo.uidKey}
                 data={initValues?.[skuInfo.uidKey]}
                 saveDataLocal={saveDataLocal}
               />
@@ -273,12 +263,12 @@ const RebateToCustomer = React.memo(function RebateToCustomer({
 
 const CustomField = ({
   field,
-  uidKey,
+  uid,
   data,
   saveDataLocal,
 }: {
   field: Field;
-  uidKey: string;
+  uid: string;
   data: any;
   saveDataLocal: (uid: string, data: Record<string, any>) => void;
 }) => {
@@ -292,7 +282,7 @@ const CustomField = ({
           textAlign={field.align}
           value={initValue}
           options={field.options}
-          onChange={(value) => saveDataLocal(uidKey, { [field.name]: value })}
+          onChange={(value) => saveDataLocal(uid, { [field.name]: value })}
         />
       )}
       {field.type === 'inputnumber' && (
@@ -302,7 +292,7 @@ const CustomField = ({
           width={150}
           style={{ textAlign: field.align }}
           value={initValue}
-          onChange={(e) => saveDataLocal(uidKey, { [field.name]: Number(e.target.value || 0) })}
+          onChange={(e) => saveDataLocal(uid, { [field.name]: Number(e.target.value || 0) })}
         />
       )}
     </>

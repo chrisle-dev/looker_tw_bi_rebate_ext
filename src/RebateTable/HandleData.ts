@@ -10,6 +10,7 @@ export type Field = {
   defaultValue?: any;
   type?: 'select' | 'inputnumber' | 'text';
   options?: { label: string; value: any }[];
+  savable?: boolean;
 };
 
 export type FieldData = {
@@ -33,7 +34,7 @@ export type SkuInfo = {
   fieldsData: Record<string, FieldData>;
 };
 
-export const customFields: Field[] = [
+export const CUSTOM_FIELDS: Field[] = [
   {
     label: 'FG/CD',
     name: 'fg_cd',
@@ -50,6 +51,7 @@ export const customFields: Field[] = [
         value: 'CD',
       },
     ],
+    savable: true,
   },
   {
     label: 'Rebate Product Qty',
@@ -57,6 +59,7 @@ export const customFields: Field[] = [
     defaultValue: 0,
     align: 'right',
     type: 'inputnumber',
+    savable: true,
   },
   {
     label: 'Selling Price',
@@ -64,6 +67,7 @@ export const customFields: Field[] = [
     defaultValue: 0,
     align: 'right',
     type: 'inputnumber',
+    savable: true,
   },
   {
     label: 'Rebate Amount',
@@ -80,6 +84,8 @@ export const customFields: Field[] = [
     type: 'text',
   },
 ];
+
+export const SAVABLE_FIELDS = CUSTOM_FIELDS.filter((item) => item.savable).map((item) => item.name);
 
 export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo[] {
   const gf1 = String(fields.find((f) => f.name.endsWith(GROUP_FIELD1_NAME))?.name);
@@ -166,8 +172,6 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
     customerResult[customerResult.length - 1].skuInfos.length - rowSpanMap['cat']
   ].fieldsData[gf2].rowSpan = rowSpanMap['cat'];
 
-  console.log('customerResult', customerResult);
-
   return customerResult;
 }
 
@@ -209,4 +213,9 @@ export function safeParseJSONObj(content: string) {
     console.warn('safeParseJSONObj', error);
     return {};
   }
+}
+
+export function pick(obj: Record<string, any>, paths: string[]): Record<string, any> {
+  if (!obj) return {};
+  return paths.reduce((acc, cur) => ({ ...acc, [cur]: obj[cur] }), {});
 }
