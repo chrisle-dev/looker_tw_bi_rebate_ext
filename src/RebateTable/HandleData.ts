@@ -128,6 +128,10 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
       if (skuLen > 0) {
         customerResult[customerResult.length - 1].skuInfos[skuLen - rowSpanMap['cat']].fieldsData[gf2].rowSpan =
           rowSpanMap['cat'];
+      } else if (customerResult.length > 1) {
+        customerResult[customerResult.length - 2].skuInfos[
+          customerResult[customerResult.length - 2].skuInfos.length - rowSpanMap['cat']
+        ].fieldsData[gf2].rowSpan = rowSpanMap['cat'];
       }
       rowSpanMap['cat'] = 1;
       lastCat = cat;
