@@ -41,6 +41,8 @@ import {
   sortAndGroupQueryData,
   pick,
   SAVABLE_FIELDS,
+  getSavableArtifacts,
+  NormalizedArtifacts,
 } from './HandleData';
 
 const RebateTable = () => {
@@ -48,10 +50,10 @@ const RebateTable = () => {
   const [fields, setFields] = useState<Field[]>([]);
   const [customerInfos, setCustomerInfos] = useState<CustomeInfo[]>([]);
   const [rbtCustomers, setRbtCustomers] = useState<string[]>([]);
-  const [savedArtifacts, setSavedArtifacts] = useState<Record<string, Record<string, any>>>({});
+  const [savedArtifacts, setSavedArtifacts] = useState<NormalizedArtifacts>({});
   const [artifactNS, setArtifactNS] = useState<string>('');
   const [errMsg, setErrMsg] = useState('');
-  const artifactsRef = useRef<Record<string, Record<string, any>>>({});
+  const artifactsRef = useRef<NormalizedArtifacts>({});
 
   // const updateArtifacts = async (data: Partial<IUpdateArtifact[]>) => {
   //   try {
@@ -74,17 +76,20 @@ const RebateTable = () => {
     artifactsRef.current = {
       ...artifactsRef.current,
       [customer]: {
-        ...artifactsRef.current[customer],
-        [uid]: {
-          ...artifactsRef.current[customer]?.[uid],
-          ...savableData,
+        value: {
+          ...artifactsRef.current[customer]?.value,
+          [uid]: {
+            ...artifactsRef.current[customer]?.value?.[uid],
+            ...savableData,
+          },
         },
+        version: -1,
       },
     };
   }, []);
 
   const updateArtifacts = async () => {
-    console.log(artifactsRef.current);
+    console.log(getSavableArtifacts(artifactsRef.current, savedArtifacts));
     artifactsRef.current = {};
   };
 
@@ -104,7 +109,6 @@ const RebateTable = () => {
       align: item['align'],
       isCustom: false,
     }));
-    // .concat(CUSTOM_FIELDS);
     setRbtCustomers(getUniqueRebateCustomers(visualizationData.queryResponse.data, displayedFields[0].name));
     setFields(displayedFields);
     setCustomerInfos(sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields));
@@ -132,10 +136,13 @@ const RebateTable = () => {
     const getSavedArtifacts = async () => {
       try {
         const artifacts = await coreSDK.ok(
-          coreSDK.artifact({ namespace: artifactNS, key: rbtCustomers.join(','), fields: 'key,value' }),
+          coreSDK.artifact({ namespace: artifactNS, key: rbtCustomers.join(','), fields: 'key,value,version' }),
         );
         console.log('artifacts', artifacts);
-        const reduced = artifacts.reduce((acc, cur) => ({ ...acc, [cur.key]: safeParseJSONObj(cur.value) }), {});
+        const reduced = artifacts.reduce(
+          (acc, cur) => ({ ...acc, [cur.key]: { value: safeParseJSONObj(cur.value), version: cur.version } }),
+          {},
+        );
         console.log('reduced artifacts', reduced);
         const calculated = calculateRebateAmtAndBalance(customerInfos, reduced);
         console.log('calculated artifacts', calculated);
@@ -173,7 +180,7 @@ const RebateTable = () => {
                   <RebateToCustomer
                     fields={fields}
                     customerInfo={customerInfo}
-                    savedData={savedArtifacts[customerInfo.customer]}
+                    savedData={savedArtifacts[customerInfo.customer]?.value}
                     key={customerInfo.customer}
                     saveArtifactsLocal={saveRefArtifacts}
                   />
@@ -201,21 +208,23 @@ const RebateToCustomer = memo(function RebateToCustomer({
   saveArtifactsLocal: (customer: string, uid: string, data: Record<string, any>) => void;
 }) {
   console.log('render RebateToCustomer');
-  const [initValues, setInitValues] = useState(savedData);
+  const [localValues, setLocalValues] = useState(savedData);
 
   useEffect(() => {
-    setInitValues(savedData);
+    setLocalValues(savedData);
   }, [savedData]);
 
   const saveDataLocal = (uid: string, data: Record<string, any>) => {
-    const newData = { ...initValues };
+    const newData = { ...localValues };
     newData[uid] = {
       ...newData[uid],
       ...data,
     };
-    const calculated = calculateRebateAmtAndBalance([customerInfo], { [customerInfo.customer]: newData });
+    const calculated = calculateRebateAmtAndBalance([customerInfo], {
+      [customerInfo.customer]: { value: newData, version: -1 },
+    });
     console.log('calculated data local', calculated);
-    setInitValues(calculated[customerInfo.customer]);
+    setLocalValues(calculated[customerInfo.customer]);
     saveArtifactsLocal(customerInfo.customer, uid, newData[uid]);
   };
 
@@ -250,7 +259,7 @@ const RebateToCustomer = memo(function RebateToCustomer({
               <CustomField
                 field={f}
                 uid={skuInfo.uidKey}
-                data={initValues?.[skuInfo.uidKey]}
+                data={localValues?.[skuInfo.uidKey]}
                 saveDataLocal={saveDataLocal}
               />
             </TableDataCell>
