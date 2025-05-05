@@ -154,7 +154,7 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
       fieldsData: values,
     });
   });
-
+  console.log('customerResult', customerResult);
   customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1].rowSpan = rowSpanMap['cus'];
   customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1b].rowSpan = rowSpanMap['cus'];
   customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf2].rowSpan = rowSpanMap['cat'];
