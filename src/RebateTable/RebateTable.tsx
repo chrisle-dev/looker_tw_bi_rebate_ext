@@ -48,10 +48,10 @@ const RebateTable = () => {
   const [savedArtifacts, setSavedArtifacts] = useState<NormalizedArtifacts>({});
   const [artifactNS, setArtifactNS] = useState<string>('');
   const [errMsg, setErrMsg] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const artifactsRef = useRef<NormalizedArtifacts>({});
 
   const saveRefArtifacts = useCallback((customer: string, uid: string, data: Record<string, any>) => {
-    console.log('saveRefArtifacts', customer, uid, data);
     artifactsRef.current = {
       ...artifactsRef.current,
       [customer]: {
@@ -68,8 +68,11 @@ const RebateTable = () => {
   }, []);
 
   const updateArtifacts = async () => {
+    if (isSaving) return;
     try {
+      setIsSaving(true);
       const data = getSavableArtifacts(artifactsRef.current, savedArtifacts);
+      if (!data.length) return;
       const res = await coreSDK.ok(coreSDK.update_artifacts(artifactNS, data));
       const newArtifacts = { ...savedArtifacts };
       res.forEach((item) => {
@@ -79,13 +82,13 @@ const RebateTable = () => {
         };
       });
       const calculated = calculateRebateAmtAndBalance(customerInfos, newArtifacts);
-      console.log('calculated updated artifacts', calculated);
       setSavedArtifacts(calculated);
       artifactsRef.current = {};
     } catch (error) {
       alert('An error occurred while updating data. Please try again.');
       console.error('updateArtifacts', error);
     }
+    setIsSaving(false);
   };
 
   useEffect(() => {
@@ -107,7 +110,6 @@ const RebateTable = () => {
     setRbtCustomers(getUniqueRebateCustomers(visualizationData.queryResponse.data, displayedFields[0].name));
     setFields(displayedFields);
     setCustomerInfos(sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields));
-    console.log('visualizationData', visualizationData);
   }, [visualizationData]);
 
   // get artifacts namespace
@@ -133,14 +135,11 @@ const RebateTable = () => {
         const artifacts = await coreSDK.ok(
           coreSDK.artifact({ namespace: artifactNS, key: rbtCustomers.join(','), fields: 'key,value,version' }),
         );
-        console.log('artifacts', artifacts);
         const reduced = artifacts.reduce(
           (acc, cur) => ({ ...acc, [cur.key]: { value: safeParseJSONObj(cur.value), version: cur.version } }),
           {},
         );
-        console.log('reduced artifacts', reduced);
         const calculated = calculateRebateAmtAndBalance(customerInfos, reduced);
-        console.log('calculated artifacts', calculated);
         setSavedArtifacts(calculated);
       } catch (error) {
         setErrMsg('An error occurred while getting artifacts. Please try again.');
@@ -159,7 +158,9 @@ const RebateTable = () => {
       ) : (
         <Box height="100%">
           <Space justify="end" py="u2">
-            <Button onClick={updateArtifacts}>Save</Button>
+            <Button onClick={updateArtifacts} width={120} disabled={isSaving}>
+              {isSaving ? 'Saving' : 'Save'}
+            </Button>
           </Space>
           <Box height="calc(100% - 50px)" overflow="auto">
             <Table className="rebate-table" mt="u2">
@@ -200,7 +201,6 @@ const RebateToCustomer = memo(function RebateToCustomer({
   savedData: Record<string, any>;
   saveArtifactsLocal: (customer: string, uid: string, data: Record<string, any>) => void;
 }) {
-  console.log('render RebateToCustomer');
   const [localValues, setLocalValues] = useState(savedData);
 
   useEffect(() => {
@@ -216,7 +216,6 @@ const RebateToCustomer = memo(function RebateToCustomer({
     const calculated = calculateRebateAmtAndBalance([customerInfo], {
       [customerInfo.customer]: { value: newData, version: -1 },
     });
-    console.log('calculated data local', calculated);
     setLocalValues(calculated[customerInfo.customer].value);
     saveArtifactsLocal(customerInfo.customer, uid, newData[uid]);
   };

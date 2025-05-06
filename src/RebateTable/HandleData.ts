@@ -227,6 +227,7 @@ export function getSavableArtifacts(
   current: NormalizedArtifacts,
 ): Partial<IUpdateArtifact[]> {
   const result: Partial<IUpdateArtifact[]> = [];
+  if (isEmptyObj(updates)) return result;
 
   Object.keys(updates).forEach((customer) => {
     const changedSkus = updates[customer].value;
