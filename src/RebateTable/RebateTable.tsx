@@ -55,22 +55,6 @@ const RebateTable = () => {
   const [errMsg, setErrMsg] = useState('');
   const artifactsRef = useRef<NormalizedArtifacts>({});
 
-  // const updateArtifacts = async (data: Partial<IUpdateArtifact[]>) => {
-  //   try {
-  //     const res = await coreSDK.ok(coreSDK.update_artifacts(artifactNS, data));
-  //     const newArtifacts = { ...savedArtifacts };
-  //     res.forEach((item) => {
-  //       newArtifacts[item.key] = safeParseJSONObj(item.value);
-  //     });
-  //     const calculated = calculateRebateAmtAndBalance(customerInfos, newArtifacts);
-  //     console.log('calculated artifacts', calculated);
-  //     setSavedArtifacts(calculated);
-  //   } catch (error) {
-  //     alert('An error occurred while updating data. Please try again.');
-  //     console.error('updateArtifacts', error);
-  //   }
-  // };
-
   const saveRefArtifacts = useCallback((customer: string, uid: string, data: Record<string, any>) => {
     console.log('saveRefArtifacts', customer, uid, data);
     artifactsRef.current = {
@@ -89,10 +73,24 @@ const RebateTable = () => {
   }, []);
 
   const updateArtifacts = async () => {
-    console.log('artifactsRef', artifactsRef.current);
-    console.log('savedArtifacts', savedArtifacts);
-    console.log(getSavableArtifacts(artifactsRef.current, savedArtifacts));
-    artifactsRef.current = {};
+    try {
+      const data = getSavableArtifacts(artifactsRef.current, savedArtifacts);
+      const res = await coreSDK.ok(coreSDK.update_artifacts(artifactNS, data));
+      const newArtifacts = { ...savedArtifacts };
+      res.forEach((item) => {
+        newArtifacts[item.key] = {
+          value: safeParseJSONObj(item.value),
+          version: item.version as number,
+        };
+      });
+      const calculated = calculateRebateAmtAndBalance(customerInfos, newArtifacts);
+      console.log('calculated updated artifacts', calculated);
+      setSavedArtifacts(calculated);
+      artifactsRef.current = {};
+    } catch (error) {
+      alert('An error occurred while updating data. Please try again.');
+      console.error('updateArtifacts', error);
+    }
   };
 
   useEffect(() => {

@@ -227,7 +227,6 @@ export function pick(obj: Record<string, any>, paths: string[]): Record<string, 
   return paths.reduce((acc, cur) => ({ ...acc, [cur]: obj[cur] }), {});
 }
 
-// {"010001 台大醫院":{"114094 JARDIANCE 10MG 30T":{"fg_cd":"fg"}}}
 export function getSavableArtifacts(
   updates: NormalizedArtifacts,
   current: NormalizedArtifacts,
