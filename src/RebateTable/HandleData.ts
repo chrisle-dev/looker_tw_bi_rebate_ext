@@ -233,19 +233,22 @@ export function getSavableArtifacts(
   current: NormalizedArtifacts,
 ): Partial<IUpdateArtifact[]> {
   const result: Partial<IUpdateArtifact[]> = [];
+
   Object.keys(updates).forEach((customer) => {
     const changedSkus = updates[customer].value;
-    const currentSkus = current[customer].value;
-    const tobeUpdated: Record<string, any> = {};
-    Object.keys(changedSkus).forEach((sku) => {
-      tobeUpdated[sku] = {
-        ...currentSkus?.[sku],
-        ...changedSkus[sku],
-      };
+    const currentSkus = current[customer].value || {};
+    const toBeUpdated: Record<string, any> = {};
+
+    Object.keys(currentSkus).forEach((sku) => {
+      const tbdSku = pick({ ...currentSkus[sku], ...changedSkus[sku] }, SAVABLE_FIELDS);
+      if (Object.keys(tbdSku).length) {
+        toBeUpdated[sku] = tbdSku;
+      }
     });
+
     result.push({
       key: customer,
-      value: JSON.stringify(pick(tobeUpdated, SAVABLE_FIELDS)),
+      value: JSON.stringify(toBeUpdated),
       version: current[customer].version,
     });
   });
