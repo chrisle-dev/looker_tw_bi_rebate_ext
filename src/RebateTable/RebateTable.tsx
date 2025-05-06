@@ -224,7 +224,7 @@ const RebateToCustomer = memo(function RebateToCustomer({
       [customerInfo.customer]: { value: newData, version: -1 },
     });
     console.log('calculated data local', calculated);
-    setLocalValues(calculated[customerInfo.customer]);
+    setLocalValues(calculated[customerInfo.customer].value);
     saveArtifactsLocal(customerInfo.customer, uid, newData[uid]);
   };
 
