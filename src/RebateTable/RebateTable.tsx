@@ -72,7 +72,7 @@ const RebateTable = () => {
   // };
 
   const saveRefArtifacts = useCallback((customer: string, uid: string, data: Record<string, any>) => {
-    const savableData = pick(data, SAVABLE_FIELDS);
+    console.log('saveRefArtifacts', customer, uid, data);
     artifactsRef.current = {
       ...artifactsRef.current,
       [customer]: {
@@ -80,7 +80,7 @@ const RebateTable = () => {
           ...artifactsRef.current[customer]?.value,
           [uid]: {
             ...artifactsRef.current[customer]?.value?.[uid],
-            ...savableData,
+            ...data,
           },
         },
         version: -1,
@@ -89,6 +89,8 @@ const RebateTable = () => {
   }, []);
 
   const updateArtifacts = async () => {
+    console.log('artifactsRef', artifactsRef.current);
+    console.log('savedArtifacts', savedArtifacts);
     console.log(getSavableArtifacts(artifactsRef.current, savedArtifacts));
     artifactsRef.current = {};
   };
