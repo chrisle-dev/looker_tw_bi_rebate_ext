@@ -241,7 +241,7 @@ export function getSavableArtifacts(
 
     Object.keys(currentSkus).forEach((sku) => {
       const tbdSku = pick({ ...currentSkus[sku], ...changedSkus[sku] }, SAVABLE_FIELDS);
-      if (Object.keys(tbdSku).length) {
+      if (!isEmptyObj(tbdSku)) {
         toBeUpdated[sku] = tbdSku;
       }
     });
@@ -253,4 +253,8 @@ export function getSavableArtifacts(
     });
   });
   return result;
+}
+
+function isEmptyObj(obj: any): boolean {
+  return Object.values(obj).filter((v) => v !== undefined).length === 0;
 }
