@@ -70,9 +70,9 @@ const RebateTable = () => {
   const updateArtifacts = async () => {
     if (isSaving) return;
     try {
-      setIsSaving(true);
       const data = getSavableArtifacts(artifactsRef.current, savedArtifacts);
       if (!data.length) return;
+      setIsSaving(true);
       const res = await coreSDK.ok(coreSDK.update_artifacts(artifactNS, data));
       const newArtifacts = { ...savedArtifacts };
       res.forEach((item) => {
