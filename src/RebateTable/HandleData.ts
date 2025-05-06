@@ -98,8 +98,8 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
   const gf3 = String(fields.find((f) => f.name.endsWith(UNIQUE_IDENTIFIER_FIELD_NAME))?.name);
 
   const sortedItems = data.sort((a, b) => {
-    const ka = `${a[gf1].value}_${a[gf2].value}_${a[gf3].value}`;
-    const kb = `${b[gf1].value}_${b[gf2].value}_${b[gf3].value}`;
+    const ka = `${a[gf1].value}_${a[gf2].value}`;
+    const kb = `${b[gf1].value}_${b[gf2].value}`;
     return ka.localeCompare(kb);
   });
   let lastCus = '';
@@ -222,11 +222,6 @@ export function safeParseJSONObj(content: string) {
   }
 }
 
-export function pick(obj: Record<string, any>, paths: string[]): Record<string, any> {
-  if (!obj) return {};
-  return paths.reduce((acc, cur) => ({ ...acc, [cur]: obj[cur] }), {});
-}
-
 export function getSavableArtifacts(
   updates: NormalizedArtifacts,
   current: NormalizedArtifacts,
@@ -252,6 +247,11 @@ export function getSavableArtifacts(
     });
   });
   return result;
+}
+
+function pick(obj: Record<string, any>, paths: string[]): Record<string, any> {
+  if (!obj) return {};
+  return paths.reduce((acc, cur) => ({ ...acc, [cur]: obj[cur] }), {});
 }
 
 function isEmptyObj(obj: any): boolean {

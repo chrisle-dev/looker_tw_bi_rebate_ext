@@ -28,19 +28,14 @@ import {
   Button,
 } from '@looker/components';
 import { ExtensionContext40 } from '@looker/extension-sdk-react';
-import { IUpdateArtifact } from '@looker/sdk';
-import './RebateTable.scss';
 import {
   Field,
-  SkuInfo,
   CustomeInfo,
   calculateRebateAmtAndBalance,
   CUSTOM_FIELDS,
   getUniqueRebateCustomers,
   safeParseJSONObj,
   sortAndGroupQueryData,
-  pick,
-  SAVABLE_FIELDS,
   getSavableArtifacts,
   NormalizedArtifacts,
 } from './HandleData';
@@ -193,8 +188,6 @@ const RebateTable = () => {
     </Box>
   );
 };
-
-// savedArtifacts: {"010001 台大醫院":{"114094 JARDIANCE 10MG 30T":{"fg_cd":"fg"}}}
 
 const RebateToCustomer = memo(function RebateToCustomer({
   fields,

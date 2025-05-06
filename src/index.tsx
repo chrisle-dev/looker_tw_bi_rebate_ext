@@ -14,10 +14,12 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom';
+import './index.scss';
 import { App } from './App';
 
 window.addEventListener('DOMContentLoaded', (_) => {
   const root = document.createElement('div');
+  root.className = 'tw-bi-rebate-ext';
   root.style.height = '100%';
   document.body.appendChild(root);
   ReactDOM.render(<App />, root);
