@@ -27,6 +27,7 @@ import {
   Span,
   Button,
 } from '@looker/components';
+import { Save as IconSave } from '@styled-icons/material';
 import { ExtensionContext40 } from '@looker/extension-sdk-react';
 import {
   Field,
@@ -105,7 +106,6 @@ const RebateTable = () => {
       label: item['label_short'],
       name: item['name'],
       align: item['align'],
-      isCustom: false,
     }));
     setRbtCustomers(getUniqueRebateCustomers(visualizationData.queryResponse.data, displayedFields[0].name));
     setFields(displayedFields);
@@ -153,23 +153,27 @@ const RebateTable = () => {
     <Box p="u4" height="100%">
       {errMsg ? (
         <Space align="center" justify="center">
-          <Span fontSize="xxlarge">{errMsg}</Span>
+          <Span fontSize="xxlarge" color="critical">
+            {errMsg}
+          </Span>
         </Space>
       ) : (
         <Box height="100%">
           <Space justify="end" py="u2">
-            <Button onClick={updateArtifacts} width={120} disabled={isSaving}>
+            <Button onClick={updateArtifacts} width={130} disabled={isSaving} iconBefore={<IconSave />}>
               {isSaving ? 'Saving' : 'Save'}
             </Button>
           </Space>
           <Box height="calc(100% - 50px)" overflow="auto">
             <Table className="rebate-table" mt="u2">
               <TableHead>
-                {[...fields, ...CUSTOM_FIELDS].map((f) => (
-                  <TableHeaderCell p="u1" textAlign={f.align} key={f.name} border>
-                    {f.label}
-                  </TableHeaderCell>
-                ))}
+                <TableRow>
+                  {[...fields, ...CUSTOM_FIELDS].map((f) => (
+                    <TableHeaderCell p="u1" textAlign={f.align} key={f.name} border bg="ui1">
+                      {f.label}
+                    </TableHeaderCell>
+                  ))}
+                </TableRow>
               </TableHead>
               <TableBody fontSize={'xsmall'}>
                 {customerInfos.map((customerInfo) => (
@@ -273,15 +277,14 @@ const CustomField = ({
   data: any;
   saveDataLocal: (uid: string, data: Record<string, any>) => void;
 }) => {
-  const initValue = data?.[field.name] ?? field.defaultValue;
+  const localValue = data?.[field.name] ?? field.defaultValue;
   return (
     <>
-      {field.type === 'text' && <Span>{initValue}</Span>}
+      {field.type === 'text' && <Span>{localValue}</Span>}
       {field.type === 'select' && (
         <Select
           width={200}
-          textAlign={field.align}
-          value={initValue}
+          value={localValue}
           options={field.options}
           onChange={(value) => saveDataLocal(uid, { [field.name]: value })}
         />
@@ -291,8 +294,7 @@ const CustomField = ({
           type="number"
           min={0}
           width={150}
-          style={{ textAlign: field.align }}
-          value={initValue}
+          value={localValue}
           onChange={(e) => saveDataLocal(uid, { [field.name]: Number(e.target.value || 0) })}
         />
       )}

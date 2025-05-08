@@ -22,7 +22,6 @@ export type FieldData = {
   rowSpan: number;
   align?: any;
   verticalAlign?: any;
-  isCustom?: boolean;
 };
 
 export type CustomeInfo = {
