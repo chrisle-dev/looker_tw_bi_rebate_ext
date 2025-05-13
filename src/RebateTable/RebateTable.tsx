@@ -119,7 +119,7 @@ const RebateTable = () => {
       try {
         const me = await coreSDK.ok(coreSDK.me());
         const username = String(me.email).split('@')[0];
-        setArtifactNS(`tw_bi_rebate_ext_${username}${me.id}_${tileHostData.dashboardId}_${tileHostData.elementId}`);
+        setArtifactNS(`tw_bi_rebate_ext_${username}_${me.id}_${tileHostData.dashboardId}_${tileHostData.elementId}`);
       } catch (error) {
         setErrMsg('An error occurred while getting your information. Please try again.');
         console.error('me', error);
