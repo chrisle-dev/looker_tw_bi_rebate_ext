@@ -91,7 +91,8 @@ export const CUSTOM_FIELDS: Field[] = [
   },
 ];
 
-const SAVABLE_FIELDS = CUSTOM_FIELDS.filter((item) => item.savable).map((item) => item.name);
+const DEFAULT_CUSTOM_FIELD_VALUES = CUSTOM_FIELDS.reduce((acc, cur) => ({ ...acc, [cur.label]: cur.defaultValue }), {});
+const SAVABLE_FIELDS = CUSTOM_FIELDS.filter((item) => item.savable).map((item) => item.label);
 const EXTRA_SAVABLE_FIELDS = [
   'contract_group',
   'rebate_to_customer',
@@ -206,14 +207,15 @@ export function calculateRebateAmtAndBalance(
     let balance = customerInfo.woRebate;
     customerInfo.skuInfos.forEach((skuInfo) => {
       const artifactValue = {
+        ...DEFAULT_CUSTOM_FIELD_VALUES,
         ...result[customerInfo.customer].value[skuInfo.uidKey],
       };
-      artifactValue['rebate_amount'] =
-        (artifactValue['fg_cd'] === 'CD'
-          ? artifactValue['rebate_product_qty']
-          : artifactValue['rebate_product_qty'] * artifactValue['selling_price']) || 0;
-      balance -= artifactValue['rebate_amount'];
-      artifactValue['balance'] = balance;
+      artifactValue['Rebate Amount'] =
+        (artifactValue['FG/CD'] === 'Cash Discount (CD)'
+          ? artifactValue['Rebate Product Qty']
+          : artifactValue['Rebate Product Qty'] * artifactValue['Selling Price']) || 0;
+      balance -= artifactValue['Rebate Amount'];
+      artifactValue['Balance'] = balance;
       result[customerInfo.customer].value[skuInfo.uidKey] = artifactValue;
     });
   });

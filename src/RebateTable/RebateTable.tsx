@@ -101,7 +101,6 @@ const RebateTable = () => {
   // sort & group query response data
   useEffect(() => {
     if (!visualizationData?.queryResponse) return;
-    console.log('visualizationData', visualizationData);
     const displayedFields: Field[] = [
       ...visualizationData.queryResponse.fields['dimensions'],
       ...visualizationData.queryResponse.fields['measures'],
@@ -125,7 +124,10 @@ const RebateTable = () => {
         console.log('tileHostData', tileHostData);
         const me = await coreSDK.ok(coreSDK.me());
         const username = String(me.email).split('@')[0];
-        setArtifactNS(`tw_bi_rebate_ext_${username}_${me.id}_${tileHostData.dashboardId}_${tileHostData.elementId}`);
+        const filteredQuery = Object.values(tileHostData.filteredQuery?.filters || {}).join('_');
+        setArtifactNS(
+          `tw_bi_rebate_ext_${username}_${me.id}_${tileHostData.dashboardId}_${tileHostData.elementId}_${filteredQuery}`,
+        );
       } catch (error) {
         setErrMsg('An error occurred while getting your information. Please try again.');
         console.error('me', error);
