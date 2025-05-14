@@ -207,7 +207,6 @@ export function calculateRebateAmtAndBalance(
     let balance = customerInfo.woRebate;
     customerInfo.skuInfos.forEach((skuInfo) => {
       const artifactValue = {
-        ...DEFAULT_CUSTOM_FIELD_VALUES,
         ...result[customerInfo.customer].value[skuInfo.uidKey],
       };
       artifactValue['Rebate Amount'] =
@@ -259,7 +258,10 @@ export function getSavableArtifacts(
             tbdSku[skuFieldsData[fieldName].label] = skuFieldsData[fieldName].value;
           }
         });
-        toBeUpdated[sku] = tbdSku;
+        toBeUpdated[sku] = {
+          ...DEFAULT_CUSTOM_FIELD_VALUES,
+          ...tbdSku,
+        };
       }
     });
 

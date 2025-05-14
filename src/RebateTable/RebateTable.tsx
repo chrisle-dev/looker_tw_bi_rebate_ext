@@ -121,10 +121,11 @@ const RebateTable = () => {
     if (!tileHostData?.dashboardId) return;
     const getMe = async () => {
       try {
-        console.log('tileHostData', tileHostData);
         const me = await coreSDK.ok(coreSDK.me());
         const username = String(me.email).split('@')[0];
-        const filteredQuery = Object.values(tileHostData.filteredQuery?.filters || {}).join('_');
+        const filteredQuery = Object.values(tileHostData.filteredQuery?.filters || {})
+          .filter((f) => !!f)
+          .join('_');
         setArtifactNS(
           `tw_bi_rebate_ext_${username}_${me.id}_${tileHostData.dashboardId}_${tileHostData.elementId}_${filteredQuery}`,
         );
