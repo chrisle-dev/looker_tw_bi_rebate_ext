@@ -97,8 +97,8 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
   const gf3 = String(fields.find((f) => f.name.endsWith(UNIQUE_IDENTIFIER_FIELD_NAME))?.name);
 
   const sortedItems = data.sort((a, b) => {
-    const ka = `${a[gf1].value}_${a[gf2].value}`;
-    const kb = `${b[gf1].value}_${b[gf2].value}`;
+    const ka = `${a[gf1].value}_${a[gf2].value}_${a[gf3].value}`;
+    const kb = `${b[gf1].value}_${b[gf2].value}_${b[gf3].value}`;
     return ka.localeCompare(kb);
   });
   let lastCus = '';
