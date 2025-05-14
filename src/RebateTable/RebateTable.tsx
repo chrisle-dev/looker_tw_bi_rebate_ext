@@ -39,6 +39,8 @@ import {
   sortAndGroupQueryData,
   getSavableArtifacts,
   NormalizedArtifacts,
+  HIDDEN_FIELDS,
+  GROUP_FIELD1_NAME,
 } from './HandleData';
 
 const RebateTable = () => {
@@ -71,7 +73,7 @@ const RebateTable = () => {
   const updateArtifacts = async () => {
     if (isSaving) return;
     try {
-      const data = getSavableArtifacts(artifactsRef.current, savedArtifacts);
+      const data = getSavableArtifacts(artifactsRef.current, savedArtifacts, customerInfos);
       if (!data.length) return;
       setIsSaving(true);
       const res = await coreSDK.ok(coreSDK.update_artifacts(artifactNS, data));
@@ -99,6 +101,7 @@ const RebateTable = () => {
   // sort & group query response data
   useEffect(() => {
     if (!visualizationData?.queryResponse) return;
+    console.log('visualizationData', visualizationData);
     const displayedFields: Field[] = [
       ...visualizationData.queryResponse.fields['dimensions'],
       ...visualizationData.queryResponse.fields['measures'],
@@ -106,8 +109,10 @@ const RebateTable = () => {
       label: item['label_short'],
       name: item['name'],
       align: item['align'],
+      hidden: HIDDEN_FIELDS.some((hf) => item['name'].endsWith(hf)),
     }));
-    setRbtCustomers(getUniqueRebateCustomers(visualizationData.queryResponse.data, displayedFields[0].name));
+    const customerKey = displayedFields.find((f) => f.name.endsWith(GROUP_FIELD1_NAME))?.name || '';
+    setRbtCustomers(getUniqueRebateCustomers(visualizationData.queryResponse.data, customerKey));
     setFields(displayedFields);
     setCustomerInfos(sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields));
   }, [visualizationData]);
@@ -117,6 +122,7 @@ const RebateTable = () => {
     if (!tileHostData?.dashboardId) return;
     const getMe = async () => {
       try {
+        console.log('tileHostData', tileHostData);
         const me = await coreSDK.ok(coreSDK.me());
         const username = String(me.email).split('@')[0];
         setArtifactNS(`tw_bi_rebate_ext_${username}_${me.id}_${tileHostData.dashboardId}_${tileHostData.elementId}`);
@@ -169,11 +175,13 @@ const RebateTable = () => {
             <Table className="rebate-table" mt="u2">
               <TableHead>
                 <TableRow>
-                  {[...fields, ...CUSTOM_FIELDS].map((f) => (
-                    <TableHeaderCell p="u1" textAlign={f.align} key={f.name} border bg="ui1">
-                      {f.label}
-                    </TableHeaderCell>
-                  ))}
+                  {[...fields, ...CUSTOM_FIELDS]
+                    .filter((f) => !f.hidden)
+                    .map((f) => (
+                      <TableHeaderCell p="u1" textAlign={f.align} key={f.name} border bg="ui1">
+                        {f.label}
+                      </TableHeaderCell>
+                    ))}
                 </TableRow>
               </TableHead>
               <TableBody fontSize={'xsmall'}>
@@ -278,7 +286,7 @@ const CustomField = ({
   data: any;
   saveDataLocal: (uid: string, data: Record<string, any>) => void;
 }) => {
-  const localValue = data?.[field.name] ?? field.defaultValue;
+  const localValue = data?.[field.label] ?? field.defaultValue;
   return (
     <>
       {field.type === 'text' && <Span>{localValue}</Span>}
@@ -287,7 +295,7 @@ const CustomField = ({
           width={200}
           value={localValue}
           options={field.options}
-          onChange={(value) => saveDataLocal(uid, { [field.name]: value })}
+          onChange={(value) => saveDataLocal(uid, { [field.label]: value })}
         />
       )}
       {field.type === 'inputnumber' && (
@@ -296,7 +304,7 @@ const CustomField = ({
           min={0}
           width={150}
           value={localValue}
-          onChange={(e) => saveDataLocal(uid, { [field.name]: Number(e.target.value || 0) })}
+          onChange={(e) => saveDataLocal(uid, { [field.label]: Number(e.target.value || 0) })}
         />
       )}
     </>

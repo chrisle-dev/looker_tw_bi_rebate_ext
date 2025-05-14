@@ -1,7 +1,7 @@
 import { IUpdateArtifact } from '@looker/sdk';
 
 const UNIQUE_IDENTIFIER_FIELD_NAME = 'rebate_to_sku';
-const GROUP_FIELD1_NAME = 'rebate_to_customer';
+export const GROUP_FIELD1_NAME = 'rebate_to_customer';
 const GROUP_FIELD1B_NAME = 'weighted_outstanding_rebate';
 const GROUP_FIELD2_NAME = 'rebate_to_category';
 
@@ -13,10 +13,12 @@ export type Field = {
   type?: 'select' | 'inputnumber' | 'text';
   options?: { label: string; value: any }[];
   savable?: boolean;
+  hidden?: boolean;
 };
 
 export type FieldData = {
   name: string;
+  label: string;
   value: any;
   rendered: any;
   rowSpan: number;
@@ -41,17 +43,17 @@ export const CUSTOM_FIELDS: Field[] = [
   {
     label: 'FG/CD',
     name: 'fg_cd',
-    defaultValue: 'FG',
+    defaultValue: 'Free Goods (FG)',
     align: 'left',
     type: 'select',
     options: [
       {
         label: 'Free Goods (FG)',
-        value: 'FG',
+        value: 'Free Goods (FG)',
       },
       {
         label: 'Cash Discount (CD)',
-        value: 'CD',
+        value: 'Cash Discount (CD)',
       },
     ],
     savable: true,
@@ -78,6 +80,7 @@ export const CUSTOM_FIELDS: Field[] = [
     defaultValue: 0,
     align: 'right',
     type: 'text',
+    savable: true,
   },
   {
     label: 'Balance',
@@ -88,13 +91,22 @@ export const CUSTOM_FIELDS: Field[] = [
   },
 ];
 
-export const SAVABLE_FIELDS = CUSTOM_FIELDS.filter((item) => item.savable).map((item) => item.name);
+const SAVABLE_FIELDS = CUSTOM_FIELDS.filter((item) => item.savable).map((item) => item.name);
+const EXTRA_SAVABLE_FIELDS = [
+  'contract_group',
+  'rebate_to_customer',
+  'rebate_to_category',
+  'rebate_to_sku',
+  'cd_percent_total',
+];
+export const HIDDEN_FIELDS = ['contract_group'];
 
 export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo[] {
   const gf1 = String(fields.find((f) => f.name.endsWith(GROUP_FIELD1_NAME))?.name);
   const gf1b = String(fields.find((f) => f.name.endsWith(GROUP_FIELD1B_NAME))?.name);
   const gf2 = String(fields.find((f) => f.name.endsWith(GROUP_FIELD2_NAME))?.name);
   const gf3 = String(fields.find((f) => f.name.endsWith(UNIQUE_IDENTIFIER_FIELD_NAME))?.name);
+  const rowSpanFields = [gf1, gf1b, gf2];
 
   const sortedItems = data.sort((a, b) => {
     const ka = `${a[gf1].value}_${a[gf2].value}_${a[gf3].value}`;
@@ -104,64 +116,65 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
   let lastCus = '';
   let lastCat = '';
   const rowSpanMap: { [key: string]: number } = {
-    cus: 0,
-    cat: 0,
+    customer: 0,
+    category: 0,
   };
 
   const customerResult: CustomeInfo[] = [];
 
   sortedItems.forEach((item, index) => {
-    const cus = item[gf1].value;
-    const cat = item[gf2].value;
+    const customer = item[gf1].value;
+    const category = item[gf2].value;
     const woRebate = item[gf1b].value;
 
-    if (cus !== lastCus) {
+    if (customer !== lastCus) {
       if (index > 0) {
-        customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1].rowSpan = rowSpanMap['cus'];
-        customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1b].rowSpan = rowSpanMap['cus'];
+        customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1].rowSpan = rowSpanMap['customer'];
+        customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1b].rowSpan = rowSpanMap['customer'];
       }
       customerResult.push({
-        customer: cus,
+        customer: customer,
         woRebate: woRebate || 0,
         skuInfos: [],
       });
-      rowSpanMap['cus'] = 1;
-      lastCus = cus;
+      rowSpanMap['customer'] = 1;
+      lastCus = customer;
       lastCat = '';
     } else {
-      rowSpanMap['cus']++;
+      rowSpanMap['customer']++;
     }
 
-    if (cat !== lastCat) {
+    if (category !== lastCat) {
       const skuLen = customerResult[customerResult.length - 1].skuInfos.length;
       if (skuLen > 0) {
-        customerResult[customerResult.length - 1].skuInfos[skuLen - rowSpanMap['cat']].fieldsData[gf2].rowSpan =
-          rowSpanMap['cat'];
+        customerResult[customerResult.length - 1].skuInfos[skuLen - rowSpanMap['category']].fieldsData[gf2].rowSpan =
+          rowSpanMap['category'];
       } else if (customerResult.length > 1) {
         customerResult[customerResult.length - 2].skuInfos[
-          customerResult[customerResult.length - 2].skuInfos.length - rowSpanMap['cat']
-        ].fieldsData[gf2].rowSpan = rowSpanMap['cat'];
+          customerResult[customerResult.length - 2].skuInfos.length - rowSpanMap['category']
+        ].fieldsData[gf2].rowSpan = rowSpanMap['category'];
       }
-      rowSpanMap['cat'] = 1;
-      lastCat = cat;
+      rowSpanMap['category'] = 1;
+      lastCat = category;
     } else {
-      rowSpanMap['cat']++;
+      rowSpanMap['category']++;
     }
 
-    const values = fields.reduce<Record<string, FieldData>>(
-      (acc, cur, i) => ({
+    const values = fields.reduce<Record<string, FieldData>>((acc, cur, i) => {
+      return {
         ...acc,
         [cur.name]: {
           name: cur.name,
+          label: cur.label,
           value: item[cur.name] ? item[cur.name].value : cur.defaultValue,
           rendered: item[cur.name] ? item[cur.name].rendered || item[cur.name].value : cur.defaultValue,
-          rowSpan: i > 2 ? 1 : 0,
-          verticalAlign: i > 2 ? 'middle' : 'top',
+          rowSpan: rowSpanFields.includes(cur.name) ? 0 : 1,
+          verticalAlign: rowSpanFields.includes(cur.name) ? 'top' : 'middle',
           align: cur.align,
+          hidden: cur.hidden,
         },
-      }),
-      {},
-    );
+      };
+    }, {});
 
     customerResult[customerResult.length - 1].skuInfos.push({
       uidKey: values[gf3]?.value || '',
@@ -169,11 +182,11 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
     });
   });
 
-  customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1].rowSpan = rowSpanMap['cus'];
-  customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1b].rowSpan = rowSpanMap['cus'];
+  customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1].rowSpan = rowSpanMap['customer'];
+  customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1b].rowSpan = rowSpanMap['customer'];
   customerResult[customerResult.length - 1].skuInfos[
-    customerResult[customerResult.length - 1].skuInfos.length - rowSpanMap['cat']
-  ].fieldsData[gf2].rowSpan = rowSpanMap['cat'];
+    customerResult[customerResult.length - 1].skuInfos.length - rowSpanMap['category']
+  ].fieldsData[gf2].rowSpan = rowSpanMap['category'];
 
   return customerResult;
 }
@@ -224,11 +237,13 @@ export function safeParseJSONObj(content: string) {
 export function getSavableArtifacts(
   updates: NormalizedArtifacts,
   current: NormalizedArtifacts,
+  customerInfos: CustomeInfo[],
 ): Partial<IUpdateArtifact[]> {
   const result: Partial<IUpdateArtifact[]> = [];
   if (isEmptyObj(updates)) return result;
 
   Object.keys(updates).forEach((customer) => {
+    const customerData = customerInfos.find((c) => c.customer === customer);
     const changedSkus = updates[customer].value;
     const currentSkus = current[customer].value || {};
     const toBeUpdated: Record<string, any> = {};
@@ -236,6 +251,12 @@ export function getSavableArtifacts(
     Object.keys(currentSkus).forEach((sku) => {
       const tbdSku = pick({ ...currentSkus[sku], ...changedSkus[sku] }, SAVABLE_FIELDS);
       if (!isEmptyObj(tbdSku)) {
+        const skuFieldsData = customerData?.skuInfos.find((s) => s.uidKey === sku)?.fieldsData || {};
+        Object.keys(skuFieldsData).forEach((fieldName) => {
+          if (EXTRA_SAVABLE_FIELDS.some((ef) => fieldName.endsWith(ef))) {
+            tbdSku[skuFieldsData[fieldName].label] = skuFieldsData[fieldName].value;
+          }
+        });
         toBeUpdated[sku] = tbdSku;
       }
     });
