@@ -53,8 +53,10 @@ const RebateTable = () => {
   const [errMsg, setErrMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const artifactsRef = useRef<NormalizedArtifacts>({});
+  // const updatedSkuRef = useRef<string[]>([]);
 
   const saveRefArtifacts = useCallback((customer: string, uid: string, data: Record<string, any>) => {
+    // updatedSkuRef.current = [...updatedSkuRef.current, customer + '_' + uid];
     artifactsRef.current = {
       ...artifactsRef.current,
       [customer]: {

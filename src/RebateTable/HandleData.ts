@@ -91,7 +91,10 @@ export const CUSTOM_FIELDS: Field[] = [
   },
 ];
 
-const DEFAULT_CUSTOM_FIELD_VALUES = CUSTOM_FIELDS.reduce((acc, cur) => ({ ...acc, [cur.label]: cur.defaultValue }), {});
+const DEFAULT_CUSTOM_FIELD_VALUES = CUSTOM_FIELDS.filter((item) => item.savable).reduce(
+  (acc, cur) => ({ ...acc, [cur.label]: cur.defaultValue }),
+  {},
+);
 const SAVABLE_FIELDS = CUSTOM_FIELDS.filter((item) => item.savable).map((item) => item.label);
 const EXTRA_SAVABLE_FIELDS = [
   'contract_group',
@@ -242,7 +245,8 @@ export function getSavableArtifacts(
 ): Partial<IUpdateArtifact[]> {
   const result: Partial<IUpdateArtifact[]> = [];
   if (isEmptyObj(updates)) return result;
-
+  console.log('updates', updates);
+  console.log('current', current);
   Object.keys(updates).forEach((customer) => {
     const customerData = customerInfos.find((c) => c.customer === customer);
     const changedSkus = updates[customer].value;
@@ -250,18 +254,20 @@ export function getSavableArtifacts(
     const toBeUpdated: Record<string, any> = {};
 
     Object.keys(currentSkus).forEach((sku) => {
-      const tbdSku = pick({ ...currentSkus[sku], ...changedSkus[sku] }, SAVABLE_FIELDS);
+      let tbdSku = pick({ ...currentSkus[sku], ...changedSkus[sku] }, SAVABLE_FIELDS);
       if (!isEmptyObj(tbdSku)) {
+        removeUndefineds(tbdSku);
+        tbdSku = {
+          ...DEFAULT_CUSTOM_FIELD_VALUES,
+          ...tbdSku,
+        };
         const skuFieldsData = customerData?.skuInfos.find((s) => s.uidKey === sku)?.fieldsData || {};
         Object.keys(skuFieldsData).forEach((fieldName) => {
           if (EXTRA_SAVABLE_FIELDS.some((ef) => fieldName.endsWith(ef))) {
             tbdSku[skuFieldsData[fieldName].label] = skuFieldsData[fieldName].value;
           }
         });
-        toBeUpdated[sku] = {
-          ...DEFAULT_CUSTOM_FIELD_VALUES,
-          ...tbdSku,
-        };
+        toBeUpdated[sku] = tbdSku;
       }
     });
 
@@ -279,6 +285,15 @@ function pick(obj: Record<string, any>, paths: string[]): Record<string, any> {
   return paths.reduce((acc, cur) => ({ ...acc, [cur]: obj[cur] }), {});
 }
 
-function isEmptyObj(obj: any): boolean {
+function isEmptyObj(obj: Record<string, any>): boolean {
   return Object.values(obj).filter((v) => v !== undefined).length === 0;
+}
+
+function removeUndefineds(obj: Record<string, any>) {
+  const keys = Object.keys(obj);
+  keys.forEach((key) => {
+    if (obj[key] === undefined) {
+      delete obj[key];
+    }
+  });
 }
