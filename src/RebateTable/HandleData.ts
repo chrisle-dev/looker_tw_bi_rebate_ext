@@ -172,7 +172,7 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
           label: cur.label,
           value: item[cur.name] ? item[cur.name].value : cur.defaultValue,
           rendered: item[cur.name] ? item[cur.name].rendered || item[cur.name].value : cur.defaultValue,
-          rowSpan: rowSpanFields.includes(cur.name) ? 0 : 1,
+          rowSpan: rowSpanFields.includes(cur.name) || cur.hidden ? 0 : 1,
           verticalAlign: rowSpanFields.includes(cur.name) ? 'top' : 'middle',
           align: cur.align,
           hidden: cur.hidden,
