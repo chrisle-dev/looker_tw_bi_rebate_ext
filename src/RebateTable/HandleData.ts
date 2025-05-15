@@ -280,7 +280,7 @@ export function getSavableArtifacts(
 
 function pick(obj: Record<string, any>, paths: string[]): Record<string, any> {
   if (!obj) return {};
-  return paths.reduce((acc, cur) => ({ ...acc, [cur]: obj[cur] }), {});
+  return paths.filter((key) => obj[key] !== undefined).reduce((acc, cur) => ({ ...acc, [cur]: obj[cur] }), {});
 }
 
 function isEmptyObj(obj: Record<string, any>): boolean {
