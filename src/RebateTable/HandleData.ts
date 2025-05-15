@@ -271,9 +271,8 @@ export function getSavableArtifacts(
 
     result.push({
       key: customer,
-      value: JSON.stringify(toBeUpdated),
+      value: encodeURIComponent(JSON.stringify(toBeUpdated)),
       version: current[customer].version,
-      content_type: 'application/json',
     });
   });
   return result;

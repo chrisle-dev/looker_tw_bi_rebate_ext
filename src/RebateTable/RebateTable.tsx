@@ -147,7 +147,10 @@ const RebateTable = () => {
           coreSDK.artifact({ namespace: artifactNS, key: rbtCustomers.join(','), fields: 'key,value,version' }),
         );
         const reduced = artifacts.reduce(
-          (acc, cur) => ({ ...acc, [cur.key]: { value: safeParseJSONObj(cur.value), version: cur.version } }),
+          (acc, cur) => ({
+            ...acc,
+            [cur.key]: { value: safeParseJSONObj(decodeURIComponent(cur.value)), version: cur.version },
+          }),
           {},
         );
         const calculated = calculateRebateAmtAndBalance(customerInfos, reduced);
