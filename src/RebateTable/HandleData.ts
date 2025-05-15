@@ -97,8 +97,8 @@ const DEFAULT_CUSTOM_FIELD_VALUES = CUSTOM_FIELDS.filter((item) => item.savable)
 );
 const SAVABLE_FIELDS = CUSTOM_FIELDS.filter((item) => item.savable).map((item) => item.label);
 const EXTRA_SAVABLE_FIELDS = [
-  'contract_group',
-  'rebate_to_customer',
+  // 'contract_group',
+  // 'rebate_to_customer',
   'rebate_to_category',
   'rebate_to_sku',
   'cd_percent_total',
