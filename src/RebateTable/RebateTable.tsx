@@ -35,12 +35,12 @@ import {
   calculateRebateAmtAndBalance,
   CUSTOM_FIELDS,
   getUniqueRebateCustomers,
-  safeParseJSONObj,
   sortAndGroupQueryData,
   getSavableArtifacts,
   NormalizedArtifacts,
   HIDDEN_FIELDS,
   GROUP_FIELD1_NAME,
+  parseEncodedJSON,
 } from './HandleData';
 
 const RebateTable = () => {
@@ -80,7 +80,7 @@ const RebateTable = () => {
       const newArtifacts = { ...savedArtifacts };
       res.forEach((item) => {
         newArtifacts[item.key] = {
-          value: safeParseJSONObj(item.value),
+          value: parseEncodedJSON(item.value),
           version: item.version as number,
         };
       });
@@ -149,7 +149,7 @@ const RebateTable = () => {
         const reduced = artifacts.reduce(
           (acc, cur) => ({
             ...acc,
-            [cur.key]: { value: safeParseJSONObj(decodeURIComponent(cur.value)), version: cur.version },
+            [cur.key]: { value: parseEncodedJSON(cur.value), version: cur.version },
           }),
           {},
         );

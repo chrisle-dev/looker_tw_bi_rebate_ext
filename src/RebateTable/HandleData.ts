@@ -229,9 +229,13 @@ export function getUniqueRebateCustomers(data: any[], key: string): string[] {
   return Array.from(new Set(data.map((item) => item[key].value)));
 }
 
-export function safeParseJSONObj(content: string) {
+function encodeJSON(obj: any) {
+  return encodeURIComponent(JSON.stringify(obj));
+}
+
+export function parseEncodedJSON(content: string) {
   try {
-    return JSON.parse(content);
+    return JSON.parse(decodeURIComponent(content));
   } catch (error) {
     console.warn('safeParseJSONObj', error);
     return {};
@@ -271,7 +275,7 @@ export function getSavableArtifacts(
 
     result.push({
       key: customer,
-      value: encodeURIComponent(JSON.stringify(toBeUpdated)),
+      value: encodeJSON(toBeUpdated),
       version: current[customer].version,
     });
   });
