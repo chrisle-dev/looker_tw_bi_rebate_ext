@@ -245,8 +245,6 @@ export function getSavableArtifacts(
 ): Partial<IUpdateArtifact[]> {
   const result: Partial<IUpdateArtifact[]> = [];
   if (isEmptyObj(updates)) return result;
-  console.log('updates', updates);
-  console.log('current', current);
   Object.keys(updates).forEach((customer) => {
     const customerData = customerInfos.find((c) => c.customer === customer);
     const changedSkus = updates[customer].value;
@@ -255,20 +253,20 @@ export function getSavableArtifacts(
 
     Object.keys(currentSkus).forEach((sku) => {
       let tbdSku = pick({ ...currentSkus[sku], ...changedSkus[sku] }, SAVABLE_FIELDS);
-      if (!isEmptyObj(tbdSku)) {
-        removeUndefineds(tbdSku);
-        tbdSku = {
-          ...DEFAULT_CUSTOM_FIELD_VALUES,
-          ...tbdSku,
-        };
-        const skuFieldsData = customerData?.skuInfos.find((s) => s.uidKey === sku)?.fieldsData || {};
-        Object.keys(skuFieldsData).forEach((fieldName) => {
-          if (EXTRA_SAVABLE_FIELDS.some((ef) => fieldName.endsWith(ef))) {
-            tbdSku[skuFieldsData[fieldName].label] = skuFieldsData[fieldName].value;
-          }
-        });
-        toBeUpdated[sku] = tbdSku;
+      if (isEmptyObj(tbdSku) || isSubset(tbdSku, DEFAULT_CUSTOM_FIELD_VALUES)) {
+        return;
       }
+      tbdSku = {
+        ...DEFAULT_CUSTOM_FIELD_VALUES,
+        ...tbdSku,
+      };
+      const skuFieldsData = customerData?.skuInfos.find((s) => s.uidKey === sku)?.fieldsData || {};
+      Object.keys(skuFieldsData).forEach((fieldName) => {
+        if (EXTRA_SAVABLE_FIELDS.some((ef) => fieldName.endsWith(ef))) {
+          tbdSku[skuFieldsData[fieldName].label] = skuFieldsData[fieldName].value;
+        }
+      });
+      toBeUpdated[sku] = tbdSku;
     });
 
     result.push({
@@ -289,11 +287,13 @@ function isEmptyObj(obj: Record<string, any>): boolean {
   return Object.values(obj).filter((v) => v !== undefined).length === 0;
 }
 
-function removeUndefineds(obj: Record<string, any>) {
-  const keys = Object.keys(obj);
-  keys.forEach((key) => {
-    if (obj[key] === undefined) {
-      delete obj[key];
+function isSubset(child: Record<string, any>, parent: Record<string, any>) {
+  const keys = Object.keys(child);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    if (child[key] !== parent[key]) {
+      return false;
     }
-  });
+  }
+  return true;
 }
