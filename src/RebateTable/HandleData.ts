@@ -4,6 +4,7 @@ const UNIQUE_IDENTIFIER_FIELD_NAME = 'rebate_to_sku';
 export const GROUP_FIELD1_NAME = 'rebate_to_customer';
 const GROUP_FIELD1B_NAME = 'weighted_outstanding_rebate';
 const GROUP_FIELD2_NAME = 'rebate_to_category';
+const ARTIFACT_VALUE_GROUP_KEY = 'Rebate to SKU';
 
 export type Field = {
   label: string;
@@ -37,7 +38,9 @@ export type SkuInfo = {
   fieldsData: Record<string, FieldData>;
 };
 
-export type NormalizedArtifacts = Record<string, { value: Record<string, any>; version: number }>;
+type ArtifactValue = Record<string, any>;
+
+export type NormalizedArtifacts = Record<string, { value: ArtifactValue; version: number }>;
 
 export const CUSTOM_FIELDS: Field[] = [
   {
@@ -229,15 +232,17 @@ export function getUniqueRebateCustomers(data: any[], key: string): string[] {
   return Array.from(new Set(data.map((item) => item[key].value)));
 }
 
-function encodeJSON(obj: any) {
-  return encodeURIComponent(JSON.stringify(obj));
+function encodeArtifactValue(obj: ArtifactValue): string {
+  const skuInfos = Object.values(obj);
+  return encodeURIComponent(JSON.stringify(skuInfos));
 }
 
-export function parseEncodedJSON(content: string) {
+export function decodeArtifactValue(content: string): ArtifactValue {
   try {
-    return JSON.parse(decodeURIComponent(content));
+    const skuInfos: any[] = JSON.parse(decodeURIComponent(content));
+    return skuInfos.reduce((acc, cur) => ({ ...acc, [cur[ARTIFACT_VALUE_GROUP_KEY]]: cur }), {});
   } catch (error) {
-    console.warn('safeParseJSONObj', error);
+    console.warn('decodeArtifactValue', error);
     return {};
   }
 }
@@ -275,7 +280,7 @@ export function getSavableArtifacts(
 
     result.push({
       key: customer,
-      value: encodeJSON(toBeUpdated),
+      value: encodeArtifactValue(toBeUpdated),
       version: current[customer].version,
     });
   });

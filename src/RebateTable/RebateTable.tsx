@@ -40,7 +40,7 @@ import {
   NormalizedArtifacts,
   HIDDEN_FIELDS,
   GROUP_FIELD1_NAME,
-  parseEncodedJSON,
+  decodeArtifactValue,
 } from './HandleData';
 
 const RebateTable = () => {
@@ -80,7 +80,7 @@ const RebateTable = () => {
       const newArtifacts = { ...savedArtifacts };
       res.forEach((item) => {
         newArtifacts[item.key] = {
-          value: parseEncodedJSON(item.value),
+          value: decodeArtifactValue(item.value),
           version: item.version as number,
         };
       });
@@ -149,7 +149,7 @@ const RebateTable = () => {
         const reduced = artifacts.reduce(
           (acc, cur) => ({
             ...acc,
-            [cur.key]: { value: parseEncodedJSON(cur.value), version: cur.version },
+            [cur.key]: { value: decodeArtifactValue(cur.value), version: cur.version },
           }),
           {},
         );
