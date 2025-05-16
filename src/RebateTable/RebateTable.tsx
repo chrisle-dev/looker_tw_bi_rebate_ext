@@ -49,7 +49,7 @@ import { IUser } from '@looker/sdk';
 const RebateTable = () => {
   const { extensionSDK, visualizationData, coreSDK, tileHostData } = useContext(ExtensionContext40);
   const [fields, setFields] = useState<Field[]>([]);
-  const [userInfo, setUserInfo] = useState<IUser>({});
+  const [userInfo, setUserInfo] = useState<IUser>();
   const [customerInfos, setCustomerInfos] = useState<CustomeInfo[]>([]);
   const [savedArtifacts, setSavedArtifacts] = useState<NormalizedArtifacts>({});
   const [artifactNS, setArtifactNS] = useState<string>('');
@@ -102,20 +102,8 @@ const RebateTable = () => {
     setIsSaving(false);
   };
 
-  const buildArtifactNamespace = async () => {
-    setArtifactNS('');
-    const username = String(userInfo.email).split('@')[0];
-    const filteredQuery = encodeFilteredQuery(tileHostData.filteredQuery);
-    const namespace = `tw_bi_rebate_ext_${username}_${userInfo.id}_${tileHostData.dashboardId}_${tileHostData.elementId}${filteredQuery}`;
-    setArtifactNS(namespace);
-    return namespace;
-  };
-
   const fetchSavedArtifacts = async (ns: string, keys: string[]) => {
     console.log('fetchSavedArtifacts ns', ns, keys);
-    if (!ns) {
-      ns = await buildArtifactNamespace();
-    }
     try {
       const artifacts = await coreSDK.ok(
         coreSDK.artifact({ namespace: ns, key: keys.join(','), fields: 'key,value,version' }),
@@ -150,6 +138,15 @@ const RebateTable = () => {
     });
   }, []);
 
+  // get artifacts namespace
+  useEffect(() => {
+    if (!tileHostData?.dashboardId || !userInfo?.email) return;
+    const username = String(userInfo.email).split('@')[0];
+    const filteredQuery = encodeFilteredQuery(tileHostData.filteredQuery);
+    const namespace = `tw_bi_rebate_ext_${username}_${userInfo.id}_${tileHostData.dashboardId}_${tileHostData.elementId}${filteredQuery}`;
+    setArtifactNS(namespace);
+  }, [tileHostData, userInfo]);
+
   // sort & group query response data
   useEffect(() => {
     if (!visualizationData?.queryResponse) return;
@@ -165,15 +162,15 @@ const RebateTable = () => {
     }));
     setFields(displayedFields);
     setCustomerInfos(sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields));
-    const customerKey = displayedFields.find((f) => f.name.endsWith(GROUP_FIELD1_NAME))?.name || '';
-    fetchSavedArtifacts(artifactNS, getUniqueRebateCustomers(visualizationData.queryResponse.data, customerKey));
   }, [visualizationData]);
 
-  // get artifacts namespace
+  // load savedArtifacts
   useEffect(() => {
-    if (!tileHostData?.dashboardId) return;
-    buildArtifactNamespace();
-  }, [tileHostData]);
+    console.log('customerInfos artifactNS', artifactNS);
+    if (!customerInfos.length) return;
+    const customerNames = customerInfos.map((item) => item.customer);
+    fetchSavedArtifacts(artifactNS, customerNames);
+  }, [customerInfos]);
 
   // // // load savedArtifacts
   // useEffect(() => {
