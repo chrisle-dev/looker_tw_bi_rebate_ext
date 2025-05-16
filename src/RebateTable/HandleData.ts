@@ -322,11 +322,3 @@ function isSubset(child: Record<string, any>, parent: Record<string, any>) {
   }
   return true;
 }
-
-async function sleep(durationMs: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, durationMs);
-  });
-}

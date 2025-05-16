@@ -44,11 +44,12 @@ import {
   getFilteredObject,
   encodeFilteredQuery,
 } from './HandleData';
-import { sleep } from '@looker/sdk-rtl';
+import { IUser } from '@looker/sdk';
 
 const RebateTable = () => {
   const { extensionSDK, visualizationData, coreSDK, tileHostData } = useContext(ExtensionContext40);
   const [fields, setFields] = useState<Field[]>([]);
+  const [userInfo, setUserInfo] = useState<IUser>({});
   const [customerInfos, setCustomerInfos] = useState<CustomeInfo[]>([]);
   const [savedArtifacts, setSavedArtifacts] = useState<NormalizedArtifacts>({});
   const [artifactNS, setArtifactNS] = useState<string>('');
@@ -101,15 +102,23 @@ const RebateTable = () => {
     setIsSaving(false);
   };
 
-  const fetchSavedArtifacts = async (keys: string[]) => {
-    console.log('artifactNS,keys', artifactNS, keys);
-    if (!artifactNS) {
-      await sleep(50);
-      return fetchSavedArtifacts(keys);
+  const buildArtifactNamespace = async () => {
+    setArtifactNS('');
+    const username = String(userInfo.email).split('@')[0];
+    const filteredQuery = encodeFilteredQuery(tileHostData.filteredQuery);
+    const namespace = `tw_bi_rebate_ext_${username}_${userInfo.id}_${tileHostData.dashboardId}_${tileHostData.elementId}${filteredQuery}`;
+    setArtifactNS(namespace);
+    return namespace;
+  };
+
+  const fetchSavedArtifacts = async (ns: string, keys: string[]) => {
+    console.log('fetchSavedArtifacts ns', ns, keys);
+    if (!ns) {
+      ns = await buildArtifactNamespace();
     }
     try {
       const artifacts = await coreSDK.ok(
-        coreSDK.artifact({ namespace: artifactNS, key: keys.join(','), fields: 'key,value,version' }),
+        coreSDK.artifact({ namespace: ns, key: keys.join(','), fields: 'key,value,version' }),
       );
       const reduced = artifacts.reduce(
         (acc, cur) => ({
@@ -127,7 +136,18 @@ const RebateTable = () => {
   };
 
   useEffect(() => {
-    extensionSDK.rendered();
+    const getMe = async () => {
+      try {
+        const me = await coreSDK.ok(coreSDK.me());
+        setUserInfo(me);
+      } catch (error) {
+        setErrMsg('An error occurred while getting user information. Please try again.');
+        console.error('me', error);
+      }
+    };
+    getMe().then(() => {
+      extensionSDK.rendered();
+    });
   }, []);
 
   // sort & group query response data
@@ -146,26 +166,13 @@ const RebateTable = () => {
     setFields(displayedFields);
     setCustomerInfos(sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields));
     const customerKey = displayedFields.find((f) => f.name.endsWith(GROUP_FIELD1_NAME))?.name || '';
-    fetchSavedArtifacts(getUniqueRebateCustomers(visualizationData.queryResponse.data, customerKey));
+    fetchSavedArtifacts(artifactNS, getUniqueRebateCustomers(visualizationData.queryResponse.data, customerKey));
   }, [visualizationData]);
 
   // get artifacts namespace
   useEffect(() => {
     if (!tileHostData?.dashboardId) return;
-    const getMe = async () => {
-      try {
-        const me = await coreSDK.ok(coreSDK.me());
-        const username = String(me.email).split('@')[0];
-        const filteredQuery = encodeFilteredQuery(tileHostData.filteredQuery);
-        setArtifactNS(
-          `tw_bi_rebate_ext_${username}_${me.id}_${tileHostData.dashboardId}_${tileHostData.elementId}${filteredQuery}`,
-        );
-      } catch (error) {
-        setErrMsg('An error occurred while getting your information. Please try again.');
-        console.error('me', error);
-      }
-    };
-    getMe();
+    buildArtifactNamespace();
   }, [tileHostData]);
 
   // // // load savedArtifacts
