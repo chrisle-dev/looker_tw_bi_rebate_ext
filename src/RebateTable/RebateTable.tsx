@@ -167,10 +167,10 @@ const RebateTable = () => {
   // load savedArtifacts
   useEffect(() => {
     console.log('customerInfos artifactNS', artifactNS);
-    if (!customerInfos.length) return;
+    if (!customerInfos.length || !artifactNS) return;
     const customerNames = customerInfos.map((item) => item.customer);
     fetchSavedArtifacts(artifactNS, customerNames);
-  }, [customerInfos]);
+  }, [customerInfos, artifactNS]);
 
   // // // load savedArtifacts
   // useEffect(() => {
