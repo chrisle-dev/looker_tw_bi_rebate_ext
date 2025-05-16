@@ -49,6 +49,7 @@ const RebateTable = () => {
   const [fields, setFields] = useState<Field[]>([]);
   const [userInfo, setUserInfo] = useState<IUser>();
   const [customerInfos, setCustomerInfos] = useState<CustomeInfo[]>([]);
+  const [artifactKeys, setArtifactKeys] = useState<string>();
   const [savedArtifacts, setSavedArtifacts] = useState<NormalizedArtifacts>({});
   const [artifactNS, setArtifactNS] = useState<string>('');
   const [errMsg, setErrMsg] = useState('');
@@ -100,11 +101,9 @@ const RebateTable = () => {
     setIsSaving(false);
   };
 
-  const fetchSavedArtifacts = async (ns: string, keys: string[]) => {
+  const fetchSavedArtifacts = async (ns: string, keys: string) => {
     try {
-      const artifacts = await coreSDK.ok(
-        coreSDK.artifact({ namespace: ns, key: keys.join(','), fields: 'key,value,version' }),
-      );
+      const artifacts = await coreSDK.ok(coreSDK.artifact({ namespace: ns, key: keys, fields: 'key,value,version' }));
       const reduced = artifacts.reduce(
         (acc, cur) => ({
           ...acc,
@@ -135,18 +134,8 @@ const RebateTable = () => {
     });
   }, []);
 
-  // get artifacts namespace
-  // useEffect(() => {
-  //   if (!tileHostData?.dashboardId || !userInfo?.email) return;
-  //   const username = String(userInfo.email).split('@')[0];
-  //   const filteredQuery = encodeFilteredObject(tileHostData.filteredQuery);
-  //   const namespace = `tw_bi_rebate_ext_${username}_${userInfo.id}_${tileHostData.dashboardId}_${tileHostData.elementId}${filteredQuery}`;
-  //   setArtifactNS(namespace);
-  // }, [tileHostData, userInfo]);
-
   // sort & group query response data
   useEffect(() => {
-    console.log('visualizationData', visualizationData);
     if (!visualizationData?.queryResponse || !userInfo) return;
     const displayedFields: Field[] = [
       ...visualizationData.queryResponse.fields['dimensions'],
@@ -157,20 +146,22 @@ const RebateTable = () => {
       align: item['align'],
       hidden: HIDDEN_FIELDS.some((hf) => item['name'].endsWith(hf)),
     }));
-    setFields(displayedFields);
-    setCustomerInfos(sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields));
+    const custInfo = sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields);
     const encodedFilter = encodeFilteredObject(visualizationData.queryResponse.applied_filters);
     const username = String(userInfo.email).split('@')[0];
     const namespace = `tw_bi_rebate_ext_${username}_${userInfo.id}_${tileHostData.dashboardId}_${tileHostData.elementId}${encodedFilter}`;
+    setFields(displayedFields);
+    setCustomerInfos(custInfo);
+    setArtifactKeys(custInfo.map((item) => item.customer).join(','));
     setArtifactNS(namespace);
   }, [visualizationData, userInfo]);
 
   // load savedArtifacts
   useEffect(() => {
-    if (!customerInfos.length || !artifactNS) return;
-    const customerNames = customerInfos.map((item) => item.customer);
-    fetchSavedArtifacts(artifactNS, customerNames);
-  }, [customerInfos, artifactNS]);
+    console.log('artifactKeys,artifactNS', artifactKeys, artifactNS);
+    if (!artifactKeys || !artifactNS) return;
+    fetchSavedArtifacts(artifactNS, artifactKeys);
+  }, [artifactKeys, artifactNS]);
 
   return (
     <Box p="u4" height="100%">
