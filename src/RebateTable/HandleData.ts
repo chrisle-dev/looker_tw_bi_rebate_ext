@@ -1,7 +1,7 @@
 import { IUpdateArtifact, IQuery } from '@looker/sdk';
 
 const UNIQUE_IDENTIFIER_FIELD_NAME = 'rebate_to_sku';
-export const GROUP_FIELD1_NAME = 'rebate_to_customer';
+const GROUP_FIELD1_NAME = 'rebate_to_customer';
 const GROUP_FIELD1B_NAME = 'weighted_outstanding_rebate';
 const GROUP_FIELD2_NAME = 'rebate_to_category';
 const ARTIFACT_VALUE_GROUP_KEY = 'Rebate to SKU';
@@ -230,10 +230,6 @@ export function calculateRebateAmtAndBalance(
   return result;
 }
 
-export function getUniqueRebateCustomers(data: any[], key: string): string[] {
-  return Array.from(new Set(data.map((item) => item[key].value)));
-}
-
 function encodeArtifactValue(obj: ArtifactValue, filters: Record<string, any>): string {
   const data = Object.values(obj);
   return encodeURIComponent(JSON.stringify({ data, filters }));
@@ -254,8 +250,9 @@ export function getFilteredObject(filters: AppliedFilters): Record<string, any> 
   return Object.values(filters).reduce((acc, cur) => ({ ...acc, [cur.field.label_short]: cur.value }), {});
 }
 
-export function encodeFilteredQuery(query?: IQuery) {
-  const encoded = Object.values(query?.filters || {})
+export function encodeFilteredObject(filters: AppliedFilters) {
+  const obj = getFilteredObject(filters);
+  const encoded = Object.values(obj)
     .map((f) => f.replace(/[^\w]/g, ''))
     .filter((f) => !!f)
     .join('_');

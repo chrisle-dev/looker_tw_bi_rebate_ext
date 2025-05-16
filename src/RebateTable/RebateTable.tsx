@@ -34,15 +34,13 @@ import {
   CustomeInfo,
   calculateRebateAmtAndBalance,
   CUSTOM_FIELDS,
-  getUniqueRebateCustomers,
   sortAndGroupQueryData,
   getSavableArtifacts,
   NormalizedArtifacts,
   HIDDEN_FIELDS,
-  GROUP_FIELD1_NAME,
   decodeArtifactValue,
   getFilteredObject,
-  encodeFilteredQuery,
+  encodeFilteredObject,
 } from './HandleData';
 import { IUser } from '@looker/sdk';
 
@@ -103,7 +101,6 @@ const RebateTable = () => {
   };
 
   const fetchSavedArtifacts = async (ns: string, keys: string[]) => {
-    console.log('fetchSavedArtifacts ns', ns, keys);
     try {
       const artifacts = await coreSDK.ok(
         coreSDK.artifact({ namespace: ns, key: keys.join(','), fields: 'key,value,version' }),
@@ -139,18 +136,18 @@ const RebateTable = () => {
   }, []);
 
   // get artifacts namespace
-  useEffect(() => {
-    if (!tileHostData?.dashboardId || !userInfo?.email) return;
-    const username = String(userInfo.email).split('@')[0];
-    const filteredQuery = encodeFilteredQuery(tileHostData.filteredQuery);
-    const namespace = `tw_bi_rebate_ext_${username}_${userInfo.id}_${tileHostData.dashboardId}_${tileHostData.elementId}${filteredQuery}`;
-    setArtifactNS(namespace);
-  }, [tileHostData, userInfo]);
+  // useEffect(() => {
+  //   if (!tileHostData?.dashboardId || !userInfo?.email) return;
+  //   const username = String(userInfo.email).split('@')[0];
+  //   const filteredQuery = encodeFilteredObject(tileHostData.filteredQuery);
+  //   const namespace = `tw_bi_rebate_ext_${username}_${userInfo.id}_${tileHostData.dashboardId}_${tileHostData.elementId}${filteredQuery}`;
+  //   setArtifactNS(namespace);
+  // }, [tileHostData, userInfo]);
 
   // sort & group query response data
   useEffect(() => {
-    if (!visualizationData?.queryResponse) return;
-    console.log('visualizationData.queryResponse', visualizationData.queryResponse);
+    console.log('visualizationData', visualizationData);
+    if (!visualizationData?.queryResponse || !userInfo) return;
     const displayedFields: Field[] = [
       ...visualizationData.queryResponse.fields['dimensions'],
       ...visualizationData.queryResponse.fields['measures'],
@@ -162,40 +159,18 @@ const RebateTable = () => {
     }));
     setFields(displayedFields);
     setCustomerInfos(sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields));
-  }, [visualizationData]);
+    const encodedFilter = encodeFilteredObject(visualizationData.queryResponse.applied_filters);
+    const username = String(userInfo.email).split('@')[0];
+    const namespace = `tw_bi_rebate_ext_${username}_${userInfo.id}_${tileHostData.dashboardId}_${tileHostData.elementId}${encodedFilter}`;
+    setArtifactNS(namespace);
+  }, [visualizationData, userInfo]);
 
   // load savedArtifacts
   useEffect(() => {
-    console.log('customerInfos artifactNS', artifactNS);
     if (!customerInfos.length || !artifactNS) return;
     const customerNames = customerInfos.map((item) => item.customer);
     fetchSavedArtifacts(artifactNS, customerNames);
   }, [customerInfos, artifactNS]);
-
-  // // // load savedArtifacts
-  // useEffect(() => {
-  //   if (!artifactNS || !rbtCustomers.length) return;
-  //   const getSavedArtifacts = async () => {
-  //     try {
-  //       const artifacts = await coreSDK.ok(
-  //         coreSDK.artifact({ namespace: artifactNS, key: rbtCustomers.join(','), fields: 'key,value,version' }),
-  //       );
-  //       const reduced = artifacts.reduce(
-  //         (acc, cur) => ({
-  //           ...acc,
-  //           [cur.key]: { value: decodeArtifactValue(cur.value), version: cur.version },
-  //         }),
-  //         {},
-  //       );
-  //       const calculated = calculateRebateAmtAndBalance(customerInfos, reduced);
-  //       setSavedArtifacts(calculated);
-  //     } catch (error) {
-  //       setErrMsg('An error occurred while getting artifacts. Please try again.');
-  //       console.error('artifacts', error);
-  //     }
-  //   };
-  //   getSavedArtifacts();
-  // }, [artifactNS, rbtCustomers]);
 
   return (
     <Box p="u4" height="100%">
