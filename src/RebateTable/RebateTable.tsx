@@ -158,7 +158,6 @@ const RebateTable = () => {
 
   // load savedArtifacts
   useEffect(() => {
-    console.log('artifactKeys,artifactNS', artifactKeys, artifactNS);
     if (!artifactKeys || !artifactNS) return;
     fetchSavedArtifacts(artifactNS, artifactKeys);
   }, [artifactKeys, artifactNS]);
