@@ -1,4 +1,4 @@
-import { IUpdateArtifact } from '@looker/sdk';
+import { IUpdateArtifact, IQuery } from '@looker/sdk';
 
 const UNIQUE_IDENTIFIER_FIELD_NAME = 'rebate_to_sku';
 export const GROUP_FIELD1_NAME = 'rebate_to_customer';
@@ -232,25 +232,38 @@ export function getUniqueRebateCustomers(data: any[], key: string): string[] {
   return Array.from(new Set(data.map((item) => item[key].value)));
 }
 
-function encodeArtifactValue(obj: ArtifactValue): string {
-  const skuInfos = Object.values(obj);
-  return encodeURIComponent(JSON.stringify(skuInfos));
+function encodeArtifactValue(obj: ArtifactValue, filters: Record<string, any>): string {
+  const data = Object.values(obj);
+  return encodeURIComponent(JSON.stringify({ data, filters }));
 }
 
 export function decodeArtifactValue(content: string): ArtifactValue {
   try {
-    const skuInfos: any[] = JSON.parse(decodeURIComponent(content));
-    return skuInfos.reduce((acc, cur) => ({ ...acc, [cur[ARTIFACT_VALUE_GROUP_KEY]]: cur }), {});
+    const { data }: { data: any[] } = JSON.parse(decodeURIComponent(content));
+    return data.reduce((acc, cur) => ({ ...acc, [cur[ARTIFACT_VALUE_GROUP_KEY]]: cur }), {});
   } catch (error) {
-    console.warn('decodeArtifactValue', error);
+    console.error('decodeArtifactValue', error);
     return {};
   }
+}
+
+export function getFilteredObject(query?: IQuery): Record<string, any> {
+  return query?.filters || {};
+}
+
+export function encodeFilteredQuery(query?: IQuery) {
+  const encoded = Object.values(query?.filters || {})
+    .map((f) => f.replace(/[^\w]/g, ''))
+    .filter((f) => !!f)
+    .join('_');
+  return encoded ? `_${encoded}` : '';
 }
 
 export function getSavableArtifacts(
   updates: NormalizedArtifacts,
   current: NormalizedArtifacts,
   customerInfos: CustomeInfo[],
+  filters: Record<string, any>,
 ): Partial<IUpdateArtifact[]> {
   const result: Partial<IUpdateArtifact[]> = [];
   if (isEmptyObj(updates)) return result;
@@ -280,7 +293,7 @@ export function getSavableArtifacts(
 
     result.push({
       key: customer,
-      value: encodeArtifactValue(toBeUpdated),
+      value: encodeArtifactValue(toBeUpdated, filters),
       version: current[customer].version,
     });
   });

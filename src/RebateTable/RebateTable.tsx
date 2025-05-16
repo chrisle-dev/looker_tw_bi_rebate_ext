@@ -41,6 +41,8 @@ import {
   HIDDEN_FIELDS,
   GROUP_FIELD1_NAME,
   decodeArtifactValue,
+  getFilteredObject,
+  encodeFilteredQuery,
 } from './HandleData';
 
 const RebateTable = () => {
@@ -73,7 +75,12 @@ const RebateTable = () => {
   const updateArtifacts = async () => {
     if (isSaving) return;
     try {
-      const data = getSavableArtifacts(artifactsRef.current, savedArtifacts, customerInfos);
+      const data = getSavableArtifacts(
+        artifactsRef.current,
+        savedArtifacts,
+        customerInfos,
+        getFilteredObject(tileHostData.filteredQuery),
+      );
       if (!data.length) return;
       setIsSaving(true);
       const res = await coreSDK.ok(coreSDK.update_artifacts(artifactNS, data));
@@ -121,14 +128,12 @@ const RebateTable = () => {
     if (!tileHostData?.dashboardId) return;
     const getMe = async () => {
       try {
+        console.log('filteredQuery', tileHostData.filteredQuery);
         const me = await coreSDK.ok(coreSDK.me());
         const username = String(me.email).split('@')[0];
-        const filteredQuery = Object.values(tileHostData.filteredQuery?.filters || {})
-          .filter((f) => !!f)
-          .map((f) => f.split(' ')[0])
-          .join('_');
+        const filteredQuery = encodeFilteredQuery(tileHostData.filteredQuery);
         setArtifactNS(
-          `tw_bi_rebate_ext_${username}_${me.id}_${tileHostData.dashboardId}_${tileHostData.elementId}_${filteredQuery}`,
+          `tw_bi_rebate_ext_${username}_${me.id}_${tileHostData.dashboardId}_${tileHostData.elementId}${filteredQuery}`,
         );
       } catch (error) {
         setErrMsg('An error occurred while getting your information. Please try again.');
