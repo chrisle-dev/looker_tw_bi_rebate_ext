@@ -38,6 +38,8 @@ export type SkuInfo = {
   fieldsData: Record<string, FieldData>;
 };
 
+export type AppliedFilters = Record<string, { value: string; field: any }>;
+
 type ArtifactValue = Record<string, any>;
 
 export type NormalizedArtifacts = Record<string, { value: ArtifactValue; version: number }>;
@@ -247,8 +249,9 @@ export function decodeArtifactValue(content: string): ArtifactValue {
   }
 }
 
-export function getFilteredObject(query?: IQuery): Record<string, any> {
-  return query?.filters || {};
+export function getFilteredObject(filters: AppliedFilters): Record<string, any> {
+  if (!filters) return {};
+  return Object.values(filters).reduce((acc, cur) => ({ ...acc, [cur.field.label_short]: cur.value }), {});
 }
 
 export function encodeFilteredQuery(query?: IQuery) {
@@ -318,4 +321,12 @@ function isSubset(child: Record<string, any>, parent: Record<string, any>) {
     }
   }
   return true;
+}
+
+async function sleep(durationMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, durationMs);
+  });
 }

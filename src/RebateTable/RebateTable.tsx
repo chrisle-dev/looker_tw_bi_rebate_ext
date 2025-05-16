@@ -44,12 +44,12 @@ import {
   getFilteredObject,
   encodeFilteredQuery,
 } from './HandleData';
+import { sleep } from '@looker/sdk-rtl';
 
 const RebateTable = () => {
   const { extensionSDK, visualizationData, coreSDK, tileHostData } = useContext(ExtensionContext40);
   const [fields, setFields] = useState<Field[]>([]);
   const [customerInfos, setCustomerInfos] = useState<CustomeInfo[]>([]);
-  const [rbtCustomers, setRbtCustomers] = useState<string[]>([]);
   const [savedArtifacts, setSavedArtifacts] = useState<NormalizedArtifacts>({});
   const [artifactNS, setArtifactNS] = useState<string>('');
   const [errMsg, setErrMsg] = useState('');
@@ -73,13 +73,13 @@ const RebateTable = () => {
   }, []);
 
   const updateArtifacts = async () => {
-    if (isSaving) return;
+    if (isSaving || !visualizationData) return;
     try {
       const data = getSavableArtifacts(
         artifactsRef.current,
         savedArtifacts,
         customerInfos,
-        getFilteredObject(tileHostData.filteredQuery),
+        getFilteredObject(visualizationData.queryResponse.applied_filters),
       );
       if (!data.length) return;
       setIsSaving(true);
@@ -101,10 +101,15 @@ const RebateTable = () => {
     setIsSaving(false);
   };
 
-  const fetchSavedArtifacts = async () => {
+  const fetchSavedArtifacts = async (keys: string[]) => {
+    console.log('artifactNS,keys', artifactNS, keys);
+    if (!artifactNS) {
+      await sleep(50);
+      return fetchSavedArtifacts(keys);
+    }
     try {
       const artifacts = await coreSDK.ok(
-        coreSDK.artifact({ namespace: artifactNS, key: rbtCustomers.join(','), fields: 'key,value,version' }),
+        coreSDK.artifact({ namespace: artifactNS, key: keys.join(','), fields: 'key,value,version' }),
       );
       const reduced = artifacts.reduce(
         (acc, cur) => ({
@@ -128,7 +133,7 @@ const RebateTable = () => {
   // sort & group query response data
   useEffect(() => {
     if (!visualizationData?.queryResponse) return;
-    console.log('queryResponse', visualizationData?.queryResponse);
+    console.log('visualizationData.queryResponse', visualizationData.queryResponse);
     const displayedFields: Field[] = [
       ...visualizationData.queryResponse.fields['dimensions'],
       ...visualizationData.queryResponse.fields['measures'],
@@ -138,11 +143,10 @@ const RebateTable = () => {
       align: item['align'],
       hidden: HIDDEN_FIELDS.some((hf) => item['name'].endsWith(hf)),
     }));
-    const customerKey = displayedFields.find((f) => f.name.endsWith(GROUP_FIELD1_NAME))?.name || '';
-    setRbtCustomers(getUniqueRebateCustomers(visualizationData.queryResponse.data, customerKey));
     setFields(displayedFields);
     setCustomerInfos(sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields));
-    fetchSavedArtifacts();
+    const customerKey = displayedFields.find((f) => f.name.endsWith(GROUP_FIELD1_NAME))?.name || '';
+    fetchSavedArtifacts(getUniqueRebateCustomers(visualizationData.queryResponse.data, customerKey));
   }, [visualizationData]);
 
   // get artifacts namespace
@@ -164,7 +168,7 @@ const RebateTable = () => {
     getMe();
   }, [tileHostData]);
 
-  // // load savedArtifacts
+  // // // load savedArtifacts
   // useEffect(() => {
   //   if (!artifactNS || !rbtCustomers.length) return;
   //   const getSavedArtifacts = async () => {
