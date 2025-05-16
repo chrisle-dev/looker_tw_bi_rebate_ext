@@ -101,6 +101,26 @@ const RebateTable = () => {
     setIsSaving(false);
   };
 
+  const fetchSavedArtifacts = async () => {
+    try {
+      const artifacts = await coreSDK.ok(
+        coreSDK.artifact({ namespace: artifactNS, key: rbtCustomers.join(','), fields: 'key,value,version' }),
+      );
+      const reduced = artifacts.reduce(
+        (acc, cur) => ({
+          ...acc,
+          [cur.key]: { value: decodeArtifactValue(cur.value), version: cur.version },
+        }),
+        {},
+      );
+      const calculated = calculateRebateAmtAndBalance(customerInfos, reduced);
+      setSavedArtifacts(calculated);
+    } catch (error) {
+      setErrMsg('An error occurred while getting artifacts. Please try again.');
+      console.error('artifacts', error);
+    }
+  };
+
   useEffect(() => {
     extensionSDK.rendered();
   }, []);
@@ -108,6 +128,7 @@ const RebateTable = () => {
   // sort & group query response data
   useEffect(() => {
     if (!visualizationData?.queryResponse) return;
+    console.log('queryResponse', visualizationData?.queryResponse);
     const displayedFields: Field[] = [
       ...visualizationData.queryResponse.fields['dimensions'],
       ...visualizationData.queryResponse.fields['measures'],
@@ -121,6 +142,7 @@ const RebateTable = () => {
     setRbtCustomers(getUniqueRebateCustomers(visualizationData.queryResponse.data, customerKey));
     setFields(displayedFields);
     setCustomerInfos(sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields));
+    fetchSavedArtifacts();
   }, [visualizationData]);
 
   // get artifacts namespace
@@ -128,7 +150,6 @@ const RebateTable = () => {
     if (!tileHostData?.dashboardId) return;
     const getMe = async () => {
       try {
-        console.log('filteredQuery', tileHostData.filteredQuery);
         const me = await coreSDK.ok(coreSDK.me());
         const username = String(me.email).split('@')[0];
         const filteredQuery = encodeFilteredQuery(tileHostData.filteredQuery);
@@ -143,30 +164,30 @@ const RebateTable = () => {
     getMe();
   }, [tileHostData]);
 
-  // load savedArtifacts
-  useEffect(() => {
-    if (!artifactNS || !rbtCustomers.length) return;
-    const getSavedArtifacts = async () => {
-      try {
-        const artifacts = await coreSDK.ok(
-          coreSDK.artifact({ namespace: artifactNS, key: rbtCustomers.join(','), fields: 'key,value,version' }),
-        );
-        const reduced = artifacts.reduce(
-          (acc, cur) => ({
-            ...acc,
-            [cur.key]: { value: decodeArtifactValue(cur.value), version: cur.version },
-          }),
-          {},
-        );
-        const calculated = calculateRebateAmtAndBalance(customerInfos, reduced);
-        setSavedArtifacts(calculated);
-      } catch (error) {
-        setErrMsg('An error occurred while getting artifacts. Please try again.');
-        console.error('artifacts', error);
-      }
-    };
-    getSavedArtifacts();
-  }, [artifactNS, rbtCustomers]);
+  // // load savedArtifacts
+  // useEffect(() => {
+  //   if (!artifactNS || !rbtCustomers.length) return;
+  //   const getSavedArtifacts = async () => {
+  //     try {
+  //       const artifacts = await coreSDK.ok(
+  //         coreSDK.artifact({ namespace: artifactNS, key: rbtCustomers.join(','), fields: 'key,value,version' }),
+  //       );
+  //       const reduced = artifacts.reduce(
+  //         (acc, cur) => ({
+  //           ...acc,
+  //           [cur.key]: { value: decodeArtifactValue(cur.value), version: cur.version },
+  //         }),
+  //         {},
+  //       );
+  //       const calculated = calculateRebateAmtAndBalance(customerInfos, reduced);
+  //       setSavedArtifacts(calculated);
+  //     } catch (error) {
+  //       setErrMsg('An error occurred while getting artifacts. Please try again.');
+  //       console.error('artifacts', error);
+  //     }
+  //   };
+  //   getSavedArtifacts();
+  // }, [artifactNS, rbtCustomers]);
 
   return (
     <Box p="u4" height="100%">
