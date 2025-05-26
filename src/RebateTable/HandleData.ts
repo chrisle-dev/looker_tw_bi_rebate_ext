@@ -262,7 +262,7 @@ export function decodeArtifactValue(value: string): CustomerArtifactValues {
 
 function getUidKey2(skuInfo: Record<string, any>, currentSkus: Record<string, any>[]) {
   const skuName = skuInfo[ARTIFACT_VALUE_GROUP_KEY];
-  const count = currentSkus.filter((item) => item[ARTIFACT_VALUE_GROUP_KEY] === skuName);
+  const count = currentSkus.filter((item) => item[ARTIFACT_VALUE_GROUP_KEY] === skuName).length;
   return `${skuName}_${count}`;
 }
 
