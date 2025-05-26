@@ -34,15 +34,18 @@ export type CustomeInfo = {
 };
 
 export type SkuInfo = {
+  skuName: string;
   uidKey: string;
   fieldsData: Record<string, FieldData>;
 };
 
 export type AppliedFilters = Record<string, { value: string; field: any }>;
 
-type ArtifactValue = Record<string, any>;
+type CustomerArtifactValues = { [uidBasedOnSKUName: string]: { [fieldLabel: string]: any } };
 
-export type NormalizedArtifacts = Record<string, { value: ArtifactValue; version: number }>;
+export type NamespaceArtifactValues = {
+  [keyBasedOnCustomerName: string]: { value: CustomerArtifactValues; version: number };
+};
 
 export const CUSTOM_FIELDS: Field[] = [
   {
@@ -185,8 +188,10 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
       };
     }, {});
 
+    const skuName = values[gf3]?.value || '';
     customerResult[customerResult.length - 1].skuInfos.push({
-      uidKey: values[gf3]?.value || '',
+      skuName,
+      uidKey: getUidKey(skuName, customerResult[customerResult.length - 1].skuInfos),
       fieldsData: values,
     });
   });
@@ -196,14 +201,19 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
   customerResult[customerResult.length - 1].skuInfos[
     customerResult[customerResult.length - 1].skuInfos.length - rowSpanMap['category']
   ].fieldsData[gf2].rowSpan = rowSpanMap['category'];
-
+  console.log('customerResult', customerResult);
   return customerResult;
+}
+
+function getUidKey(skuName: string, currentSkus: SkuInfo[]) {
+  const count = currentSkus.filter((item) => item.skuName === skuName).length;
+  return `${skuName}_${count}`;
 }
 
 export function calculateRebateAmtAndBalance(
   customerInfos: CustomeInfo[],
-  customFieldsData: NormalizedArtifacts,
-): NormalizedArtifacts {
+  customFieldsData: NamespaceArtifactValues,
+): NamespaceArtifactValues {
   const result = { ...customFieldsData };
   customerInfos.forEach((customerInfo) => {
     result[customerInfo.customer] = {
@@ -230,19 +240,30 @@ export function calculateRebateAmtAndBalance(
   return result;
 }
 
-function encodeArtifactValue(obj: ArtifactValue, filters: Record<string, any>): string {
+function encodeArtifactValue(obj: CustomerArtifactValues, filters: Record<string, any>): string {
   const data = Object.values(obj);
   return encodeURIComponent(JSON.stringify({ data, filters }));
 }
 
-export function decodeArtifactValue(content: string): ArtifactValue {
+export function decodeArtifactValue(value: string): CustomerArtifactValues {
   try {
-    const { data }: { data: any[] } = JSON.parse(decodeURIComponent(content));
-    return data.reduce((acc, cur) => ({ ...acc, [cur[ARTIFACT_VALUE_GROUP_KEY]]: cur }), {});
+    const { data }: { data: any[] } = JSON.parse(decodeURIComponent(value));
+    const decoded = data.reduce(
+      (acc, cur, curIndex) => ({ ...acc, [getUidKey2(cur, data.slice(0, curIndex))]: cur }),
+      {},
+    );
+    console.log('decodeArtifactValue', decoded);
+    return decoded;
   } catch (error) {
     console.error('decodeArtifactValue', error);
     return {};
   }
+}
+
+function getUidKey2(skuInfo: Record<string, any>, currentSkus: Record<string, any>[]) {
+  const skuName = skuInfo[ARTIFACT_VALUE_GROUP_KEY];
+  const count = currentSkus.filter((item) => item[ARTIFACT_VALUE_GROUP_KEY] === skuName);
+  return `${skuName}_${count}`;
 }
 
 export function getFilteredObject(filters: AppliedFilters): Record<string, any> {
@@ -260,8 +281,8 @@ export function encodeFilteredObject(filters: AppliedFilters) {
 }
 
 export function getSavableArtifacts(
-  updates: NormalizedArtifacts,
-  current: NormalizedArtifacts,
+  updates: NamespaceArtifactValues,
+  current: NamespaceArtifactValues,
   customerInfos: CustomeInfo[],
   filters: Record<string, any>,
 ): Partial<IUpdateArtifact[]> {
@@ -273,8 +294,8 @@ export function getSavableArtifacts(
     const currentSkus = current[customer].value || {};
     const toBeUpdated: Record<string, any> = {};
 
-    Object.keys(currentSkus).forEach((sku) => {
-      let tbdSku = pick({ ...currentSkus[sku], ...changedSkus[sku] }, SAVABLE_FIELDS);
+    Object.keys(currentSkus).forEach((uidKey) => {
+      let tbdSku = pick({ ...currentSkus[uidKey], ...changedSkus[uidKey] }, SAVABLE_FIELDS);
       if (isEmptyObj(tbdSku) || isSubset(tbdSku, DEFAULT_CUSTOM_FIELD_VALUES)) {
         return;
       }
@@ -282,13 +303,13 @@ export function getSavableArtifacts(
         ...DEFAULT_CUSTOM_FIELD_VALUES,
         ...tbdSku,
       };
-      const skuFieldsData = customerData?.skuInfos.find((s) => s.uidKey === sku)?.fieldsData || {};
+      const skuFieldsData = customerData?.skuInfos.find((s) => s.uidKey === uidKey)?.fieldsData || {};
       Object.keys(skuFieldsData).forEach((fieldName) => {
         if (EXTRA_SAVABLE_FIELDS.some((ef) => fieldName.endsWith(ef))) {
           tbdSku[skuFieldsData[fieldName].label] = skuFieldsData[fieldName].value;
         }
       });
-      toBeUpdated[sku] = tbdSku;
+      toBeUpdated[uidKey] = tbdSku;
     });
 
     result.push({

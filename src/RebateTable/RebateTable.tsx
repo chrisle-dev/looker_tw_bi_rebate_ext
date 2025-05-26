@@ -36,7 +36,7 @@ import {
   CUSTOM_FIELDS,
   sortAndGroupQueryData,
   getSavableArtifacts,
-  NormalizedArtifacts,
+  NamespaceArtifactValues,
   HIDDEN_FIELDS,
   decodeArtifactValue,
   getFilteredObject,
@@ -50,11 +50,11 @@ const RebateTable = () => {
   const [userInfo, setUserInfo] = useState<IUser>();
   const [customerInfos, setCustomerInfos] = useState<CustomeInfo[]>([]);
   const [artifactKeys, setArtifactKeys] = useState<string>();
-  const [savedArtifacts, setSavedArtifacts] = useState<NormalizedArtifacts>({});
+  const [savedArtifacts, setSavedArtifacts] = useState<NamespaceArtifactValues>({});
   const [artifactNS, setArtifactNS] = useState<string>('');
   const [errMsg, setErrMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const artifactsRef = useRef<NormalizedArtifacts>({});
+  const artifactsRef = useRef<NamespaceArtifactValues>({});
 
   const saveRefArtifacts = useCallback((customer: string, uid: string, data: Record<string, any>) => {
     artifactsRef.current = {
