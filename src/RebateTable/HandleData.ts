@@ -295,7 +295,7 @@ export function getSavableArtifacts(
     const toBeUpdated: Record<string, any> = {};
 
     Object.keys(currentSkus)
-      .sort((a, b) => a.localeCompare(a, b))
+      .sort((a, b) => a.localeCompare(b))
       .forEach((uidKey) => {
         let tbdSku = pick({ ...currentSkus[uidKey], ...changedSkus[uidKey] }, SAVABLE_FIELDS);
         if (isEmptyObj(tbdSku) || isSubset(tbdSku, DEFAULT_CUSTOM_FIELD_VALUES)) {
