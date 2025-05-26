@@ -207,7 +207,7 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
 
 function getUidKey(skuName: string, currentSkus: SkuInfo[]) {
   const count = currentSkus.filter((item) => item.skuName === skuName).length;
-  return `${skuName}_${count}`;
+  return `${skuName}_${String(count).padStart(2, '0')}`;
 }
 
 export function calculateRebateAmtAndBalance(
@@ -263,7 +263,7 @@ export function decodeArtifactValue(value: string): CustomerArtifactValues {
 function getUidKey2(skuInfo: Record<string, any>, currentSkus: Record<string, any>[]) {
   const skuName = skuInfo[ARTIFACT_VALUE_GROUP_KEY];
   const count = currentSkus.filter((item) => item[ARTIFACT_VALUE_GROUP_KEY] === skuName).length;
-  return `${skuName}_${count}`;
+  return `${skuName}_${String(count).padStart(2, '0')}`;
 }
 
 export function getFilteredObject(filters: AppliedFilters): Record<string, any> {
@@ -294,23 +294,25 @@ export function getSavableArtifacts(
     const currentSkus = current[customer].value || {};
     const toBeUpdated: Record<string, any> = {};
 
-    Object.keys(currentSkus).forEach((uidKey) => {
-      let tbdSku = pick({ ...currentSkus[uidKey], ...changedSkus[uidKey] }, SAVABLE_FIELDS);
-      if (isEmptyObj(tbdSku) || isSubset(tbdSku, DEFAULT_CUSTOM_FIELD_VALUES)) {
-        return;
-      }
-      tbdSku = {
-        ...DEFAULT_CUSTOM_FIELD_VALUES,
-        ...tbdSku,
-      };
-      const skuFieldsData = customerData?.skuInfos.find((s) => s.uidKey === uidKey)?.fieldsData || {};
-      Object.keys(skuFieldsData).forEach((fieldName) => {
-        if (EXTRA_SAVABLE_FIELDS.some((ef) => fieldName.endsWith(ef))) {
-          tbdSku[skuFieldsData[fieldName].label] = skuFieldsData[fieldName].value;
+    Object.keys(currentSkus)
+      .sort((a, b) => a.localeCompare(a, b))
+      .forEach((uidKey) => {
+        let tbdSku = pick({ ...currentSkus[uidKey], ...changedSkus[uidKey] }, SAVABLE_FIELDS);
+        if (isEmptyObj(tbdSku) || isSubset(tbdSku, DEFAULT_CUSTOM_FIELD_VALUES)) {
+          return;
         }
+        tbdSku = {
+          ...DEFAULT_CUSTOM_FIELD_VALUES,
+          ...tbdSku,
+        };
+        const skuFieldsData = customerData?.skuInfos.find((s) => s.uidKey === uidKey)?.fieldsData || {};
+        Object.keys(skuFieldsData).forEach((fieldName) => {
+          if (EXTRA_SAVABLE_FIELDS.some((ef) => fieldName.endsWith(ef))) {
+            tbdSku[skuFieldsData[fieldName].label] = skuFieldsData[fieldName].value;
+          }
+        });
+        toBeUpdated[uidKey] = tbdSku;
       });
-      toBeUpdated[uidKey] = tbdSku;
-    });
 
     result.push({
       key: customer,
