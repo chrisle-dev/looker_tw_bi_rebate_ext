@@ -26,8 +26,10 @@ import {
   Space,
   Span,
   Button,
+  MultiFunctionButton,
+  ButtonOutline,
 } from '@looker/components';
-import { Save as IconSave } from '@styled-icons/material';
+import { Save as IconSave, Check as IconCheck } from '@styled-icons/material';
 import { ExtensionContext40 } from '@looker/extension-sdk-react';
 import {
   Field,
@@ -44,6 +46,12 @@ import {
 } from './HandleData';
 import { IUser } from '@looker/sdk';
 
+const enum SaveState {
+  Unsaved = 'unsaved',
+  Saving = 'saving',
+  Saved = 'saved',
+}
+
 const RebateTable = () => {
   const { extensionSDK, visualizationData, coreSDK, tileHostData } = useContext(ExtensionContext40);
   const [fields, setFields] = useState<Field[]>([]);
@@ -53,7 +61,8 @@ const RebateTable = () => {
   const [savedArtifacts, setSavedArtifacts] = useState<NamespaceArtifactValues>({});
   const [artifactNS, setArtifactNS] = useState<string>('');
   const [errMsg, setErrMsg] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  // const [isSaving, setIsSaving] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>(SaveState.Unsaved);
   const artifactsRef = useRef<NamespaceArtifactValues>({});
 
   const saveRefArtifacts = useCallback((customer: string, uid: string, data: Record<string, any>) => {
@@ -73,7 +82,7 @@ const RebateTable = () => {
   }, []);
 
   const updateArtifacts = async () => {
-    if (isSaving || !visualizationData) return;
+    if (saveState === SaveState.Saving || !visualizationData) return;
     try {
       const data = getSavableArtifacts(
         artifactsRef.current,
@@ -82,7 +91,7 @@ const RebateTable = () => {
         getFilteredObject(visualizationData.queryResponse.applied_filters),
       );
       if (!data.length) return;
-      setIsSaving(true);
+      setSaveState(SaveState.Saving);
       const res = await coreSDK.ok(coreSDK.update_artifacts(artifactNS, data));
       const newArtifacts = { ...savedArtifacts };
       res.forEach((item) => {
@@ -94,11 +103,15 @@ const RebateTable = () => {
       const calculated = calculateRebateAmtAndBalance(customerInfos, newArtifacts);
       setSavedArtifacts(calculated);
       artifactsRef.current = {};
+      setSaveState(SaveState.Saved);
+      setTimeout(() => {
+        setSaveState(SaveState.Unsaved);
+      }, 3000);
     } catch (error) {
+      setSaveState(SaveState.Unsaved);
       alert('An error occurred while updating data. Please try again.');
       console.error('updateArtifacts', error);
     }
-    setIsSaving(false);
   };
 
   const fetchSavedArtifacts = async (ns: string, keys: string) => {
@@ -173,9 +186,16 @@ const RebateTable = () => {
       ) : (
         <Box height="100%">
           <Space justify="end" py="u2">
-            <Button onClick={updateArtifacts} width={130} disabled={isSaving} iconBefore={<IconSave />}>
-              {isSaving ? 'Saving' : 'Save'}
-            </Button>
+            <MultiFunctionButton swap={saveState === SaveState.Saved} alternate={SavedButton}>
+              <Button
+                onClick={updateArtifacts}
+                width={130}
+                disabled={saveState === SaveState.Saving}
+                iconBefore={<IconSave />}
+              >
+                {saveState === SaveState.Saving ? 'Saving' : 'Save'}
+              </Button>
+            </MultiFunctionButton>
           </Space>
           <Box height="calc(100% - 50px)" overflow="auto">
             <Table className="rebate-table" mt="u2">
@@ -316,5 +336,11 @@ const CustomField = ({
     </>
   );
 };
+
+const SavedButton = (
+  <ButtonOutline iconBefore={<IconCheck />} width={130}>
+    Data Saved
+  </ButtonOutline>
+);
 
 export default RebateTable;
