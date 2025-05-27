@@ -201,7 +201,6 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
   customerResult[customerResult.length - 1].skuInfos[
     customerResult[customerResult.length - 1].skuInfos.length - rowSpanMap['category']
   ].fieldsData[gf2].rowSpan = rowSpanMap['category'];
-  console.log('customerResult', customerResult);
   return customerResult;
 }
 
@@ -252,7 +251,6 @@ export function decodeArtifactValue(value: string): CustomerArtifactValues {
       (acc, cur, curIndex) => ({ ...acc, [getUidKey2(cur, data.slice(0, curIndex))]: cur }),
       {},
     );
-    console.log('decodeArtifactValue', decoded);
     return decoded;
   } catch (error) {
     console.error('decodeArtifactValue', error);
