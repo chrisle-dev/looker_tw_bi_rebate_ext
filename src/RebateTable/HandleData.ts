@@ -1,4 +1,5 @@
-import { IUpdateArtifact, IQuery } from '@looker/sdk';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { IUpdateArtifact } from '@looker/sdk';
 
 const UNIQUE_IDENTIFIER_FIELD_NAME = 'rebate_to_sku';
 const GROUP_FIELD1_NAME = 'rebate_to_customer';
@@ -172,7 +173,7 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
       rowSpanMap['category']++;
     }
 
-    const values = fields.reduce<Record<string, FieldData>>((acc, cur, i) => {
+    const values = fields.reduce<Record<string, FieldData>>((acc, cur) => {
       return {
         ...acc,
         [cur.name]: {
@@ -324,6 +325,15 @@ export function getSavableArtifacts(
 function pick(obj: Record<string, any>, paths: string[]): Record<string, any> {
   if (!obj) return {};
   return paths.filter((key) => obj[key] !== undefined).reduce((acc, cur) => ({ ...acc, [cur]: obj[cur] }), {});
+}
+
+export function chunk<T>(arr: T[], size: number): T[][] {
+  const result = [];
+  for (let i = 0; i < arr.length; i += size) {
+    const chunk = arr.slice(i, i + size);
+    result.push(chunk);
+  }
+  return result;
 }
 
 function isEmptyObj(obj: Record<string, any>): boolean {

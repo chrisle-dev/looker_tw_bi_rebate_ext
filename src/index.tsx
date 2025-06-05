@@ -17,7 +17,7 @@ import ReactDOM from 'react-dom';
 import './index.scss';
 import { App } from './App';
 
-window.addEventListener('DOMContentLoaded', (_) => {
+window.addEventListener('DOMContentLoaded', () => {
   const root = document.createElement('div');
   root.className = 'tw-bi-rebate-ext';
   root.style.height = '100%';

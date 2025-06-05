@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "jsx": "react",
-    "lib": ["dom", "es2015"],
+    "lib": ["dom", "es2019"],
     "sourceMap": true,
     "strict": true,
     "esModuleInterop": true

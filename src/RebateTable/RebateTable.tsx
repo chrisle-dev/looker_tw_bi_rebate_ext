@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Copyright 2021 Google LLC
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,6 +44,7 @@ import {
   decodeArtifactValue,
   getFilteredObject,
   encodeFilteredObject,
+  chunk,
 } from './HandleData';
 import { IUser } from '@looker/sdk';
 
@@ -116,7 +118,15 @@ const RebateTable = () => {
 
   const fetchSavedArtifacts = async (ns: string, keys: string) => {
     try {
-      const artifacts = await coreSDK.ok(coreSDK.artifact({ namespace: ns, key: keys, fields: 'key,value,version' }));
+      const artifacts = await (async () => {
+        const keyBatches = chunk(keys.split(','), 10);
+        const result = await Promise.all(
+          keyBatches.map(async (ks) => {
+            return coreSDK.ok(coreSDK.artifact({ namespace: ns, key: ks.join(','), fields: 'key,value,version' }));
+          }),
+        );
+        return result.flat();
+      })();
       const reduced = artifacts.reduce(
         (acc, cur) => ({
           ...acc,
