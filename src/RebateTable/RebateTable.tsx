@@ -35,7 +35,7 @@ import { ExtensionContext40 } from '@looker/extension-sdk-react';
 import {
   Field,
   CustomeInfo,
-  calculateRebateAmtAndBalance,
+  calculateSavedArtifactValues,
   CUSTOM_FIELDS,
   sortAndGroupQueryData,
   getSavableArtifacts,
@@ -63,7 +63,6 @@ const RebateTable = () => {
   const [savedArtifacts, setSavedArtifacts] = useState<NamespaceArtifactValues>({});
   const [artifactNS, setArtifactNS] = useState<string>('');
   const [errMsg, setErrMsg] = useState('');
-  // const [isSaving, setIsSaving] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>(SaveState.Unsaved);
   const artifactsRef = useRef<NamespaceArtifactValues>({});
 
@@ -102,7 +101,7 @@ const RebateTable = () => {
           version: item.version as number,
         };
       });
-      const calculated = calculateRebateAmtAndBalance(customerInfos, newArtifacts);
+      const calculated = calculateSavedArtifactValues(customerInfos, newArtifacts);
       setSavedArtifacts(calculated);
       artifactsRef.current = {};
       setSaveState(SaveState.Saved);
@@ -134,7 +133,7 @@ const RebateTable = () => {
         }),
         {},
       );
-      const calculated = calculateRebateAmtAndBalance(customerInfos, reduced);
+      const calculated = calculateSavedArtifactValues(customerInfos, reduced);
       setSavedArtifacts(calculated);
     } catch (error) {
       setErrMsg('An error occurred while getting artifacts. Please try again.');
@@ -262,7 +261,7 @@ const RebateToCustomer = memo(function RebateToCustomer({
       ...newData[uid],
       ...data,
     };
-    const calculated = calculateRebateAmtAndBalance([customerInfo], {
+    const calculated = calculateSavedArtifactValues([customerInfo], {
       [customerInfo.customer]: { value: newData, version: -1 },
     });
     setLocalValues(calculated[customerInfo.customer].value);
@@ -322,25 +321,26 @@ const CustomField = ({
   data: any;
   saveDataLocal: (uid: string, data: Record<string, any>) => void;
 }) => {
-  const localValue = data?.[field.label] ?? field.defaultValue;
+  const localValue = data?.[field.name] ?? field.defaultValue;
+  const rendered = field.render ? field.render(localValue) : localValue;
   return (
     <>
-      {field.type === 'text' && <Span>{localValue}</Span>}
+      {field.type === 'text' && <Span>{rendered}</Span>}
       {field.type === 'select' && (
         <Select
-          width={200}
+          minWidth={150}
           value={localValue}
           options={field.options}
-          onChange={(value) => saveDataLocal(uid, { [field.label]: value })}
+          onChange={(value) => saveDataLocal(uid, { [field.name]: value })}
         />
       )}
       {field.type === 'inputnumber' && (
         <InputText
           type="number"
           min={0}
-          width={150}
+          minWidth={100}
           value={localValue}
-          onChange={(e) => saveDataLocal(uid, { [field.label]: Number(e.target.value || 0) })}
+          onChange={(e) => saveDataLocal(uid, { [field.name]: Number(e.target.value || 0) })}
         />
       )}
     </>

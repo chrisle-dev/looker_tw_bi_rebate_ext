@@ -1,9 +1,9 @@
 .tw-bi-rebate-ext {
   .rebate-table {
     border-collapse: collapse;
-    th,
     td {
       white-space: nowrap;
+      text-overflow: ellipsis;
     }
   }
 

@@ -5,7 +5,22 @@ const UNIQUE_IDENTIFIER_FIELD_NAME = 'rebate_to_sku';
 const GROUP_FIELD1_NAME = 'rebate_to_customer';
 const GROUP_FIELD1B_NAME = 'weighted_outstanding_rebate';
 const GROUP_FIELD2_NAME = 'rebate_to_category';
+const RECOMMENDED_REBATE_AMT_FIELD_NAME = 'recommended_rebate_amt';
 const ARTIFACT_VALUE_GROUP_KEY = 'Rebate to SKU';
+
+enum RebateType {
+  FG = 'Free Goods (FG)',
+  CD = 'Cash Discount (CD)',
+}
+
+enum CustomFieldName {
+  RebateType = 'FG/CD',
+  QtyOrAmt = 'FG: Rebate Qty (box) CD: Rebate Amt',
+  SellingPrice = 'FG: Selling Price (box)',
+  RebateAmt = 'Rebate Amt',
+  Balance = 'Balance',
+  BalancePercentage = 'Balance %',
+}
 
 export type Field = {
   label: string;
@@ -16,6 +31,7 @@ export type Field = {
   options?: { label: string; value: any }[];
   savable?: boolean;
   hidden?: boolean;
+  render?: (value: any) => any;
 };
 
 export type FieldData = {
@@ -51,60 +67,70 @@ export type NamespaceArtifactValues = {
 export const CUSTOM_FIELDS: Field[] = [
   {
     label: 'FG/CD',
-    name: 'fg_cd',
-    defaultValue: 'Free Goods (FG)',
+    name: CustomFieldName.RebateType,
+    defaultValue: RebateType.CD,
     align: 'left',
     type: 'select',
     options: [
       {
-        label: 'Free Goods (FG)',
-        value: 'Free Goods (FG)',
+        label: RebateType.FG,
+        value: RebateType.FG,
       },
       {
-        label: 'Cash Discount (CD)',
-        value: 'Cash Discount (CD)',
+        label: RebateType.CD,
+        value: RebateType.CD,
       },
     ],
     savable: true,
   },
   {
-    label: 'Rebate Product Qty',
-    name: 'rebate_product_qty',
+    label: 'FG: Rebate Qty\n(box)\nCD: Rebate Amt',
+    name: CustomFieldName.QtyOrAmt,
+    defaultValue: -1,
+    align: 'right',
+    type: 'inputnumber',
+    savable: true,
+  },
+  {
+    label: 'FG: Selling Price (box)',
+    name: CustomFieldName.SellingPrice,
     defaultValue: 0,
     align: 'right',
     type: 'inputnumber',
     savable: true,
   },
   {
-    label: 'Selling Price',
-    name: 'selling_price',
-    defaultValue: 0,
-    align: 'right',
-    type: 'inputnumber',
-    savable: true,
-  },
-  {
-    label: 'Rebate Amount',
-    name: 'rebate_amount',
+    label: 'Rebate Amt',
+    name: CustomFieldName.RebateAmt,
     defaultValue: 0,
     align: 'right',
     type: 'text',
     savable: true,
+    render: (value: any) => Number(value).toLocaleString(),
   },
   {
     label: 'Balance',
-    name: 'balance',
+    name: CustomFieldName.Balance,
     defaultValue: 0,
     align: 'right',
     type: 'text',
+    render: (value: any) => Number(value).toLocaleString(),
+  },
+  {
+    label: 'Balance %',
+    name: CustomFieldName.BalancePercentage,
+    defaultValue: 0,
+    align: 'right',
+    type: 'text',
+    render: (value: any) => Number(value).toFixed(1) + '%',
   },
 ];
 
 const DEFAULT_CUSTOM_FIELD_VALUES = CUSTOM_FIELDS.filter((item) => item.savable).reduce(
-  (acc, cur) => ({ ...acc, [cur.label]: cur.defaultValue }),
+  (acc, cur) => ({ ...acc, [cur.name]: cur.defaultValue }),
   {},
 );
-const SAVABLE_FIELDS = CUSTOM_FIELDS.filter((item) => item.savable).map((item) => item.label);
+const SAVABLE_FIELDS = CUSTOM_FIELDS.filter((item) => item.savable).map((item) => item.name);
 const EXTRA_SAVABLE_FIELDS = [
   'contract_group',
   'rebate_to_customer',
@@ -210,7 +236,7 @@ function getUidKey(skuName: string, currentSkus: SkuInfo[]) {
   return `${skuName}_${String(count).padStart(2, '0')}`;
 }
 
-export function calculateRebateAmtAndBalance(
+export function calculateSavedArtifactValues(
   customerInfos: CustomeInfo[],
   customFieldsData: NamespaceArtifactValues,
 ): NamespaceArtifactValues {
@@ -224,20 +250,32 @@ export function calculateRebateAmtAndBalance(
     }
     let balance = customerInfo.woRebate;
     customerInfo.skuInfos.forEach((skuInfo) => {
-      const artifactValue = {
+      const recmRbtAmtKey = Object.keys(skuInfo).find((k) => k.endsWith(RECOMMENDED_REBATE_AMT_FIELD_NAME)) || '';
+      const recommededRebateAmt = skuInfo.fieldsData[recmRbtAmtKey].value;
+      const artifactValue: Partial<Record<CustomFieldName, any>> = {
+        ...DEFAULT_CUSTOM_FIELD_VALUES,
         ...result[customerInfo.customer].value[skuInfo.uidKey],
       };
-      artifactValue['Rebate Amount'] =
-        (artifactValue['FG/CD'] === 'Cash Discount (CD)'
-          ? artifactValue['Rebate Product Qty']
-          : artifactValue['Rebate Product Qty'] * artifactValue['Selling Price']) || 0;
-      balance -= artifactValue['Rebate Amount'];
-      artifactValue['Balance'] = balance;
+      artifactValue[CustomFieldName.RebateAmt] = calculateRebateAmount(artifactValue, recommededRebateAmt);
+      balance -= artifactValue[CustomFieldName.RebateAmt];
+      artifactValue[CustomFieldName.Balance] = balance;
+      artifactValue[CustomFieldName.BalancePercentage] = (balance / customerInfo.woRebate) * 100;
       result[customerInfo.customer].value[skuInfo.uidKey] = artifactValue;
     });
   });
 
   return result;
+}
+
+function calculateRebateAmount(artifactValue: Partial<Record<CustomFieldName, any>>, recommendedAmt: number): number {
+  let value = artifactValue[CustomFieldName.QtyOrAmt];
+  if (artifactValue[CustomFieldName.RebateType] === RebateType.FG) {
+    value = artifactValue[CustomFieldName.QtyOrAmt] * artifactValue[CustomFieldName.SellingPrice];
+  }
+  if (value < 0) {
+    value = recommendedAmt || 0;
+  }
+  return value;
 }
 
 function encodeArtifactValue(obj: CustomerArtifactValues, filters: Record<string, any>): string {
@@ -307,7 +345,7 @@ export function getSavableArtifacts(
         const skuFieldsData = customerData?.skuInfos.find((s) => s.uidKey === uidKey)?.fieldsData || {};
         Object.keys(skuFieldsData).forEach((fieldName) => {
           if (EXTRA_SAVABLE_FIELDS.some((ef) => fieldName.endsWith(ef))) {
-            tbdSku[skuFieldsData[fieldName].label] = skuFieldsData[fieldName].value;
+            tbdSku[skuFieldsData[fieldName].name] = skuFieldsData[fieldName].value;
           }
         });
         toBeUpdated[uidKey] = tbdSku;
