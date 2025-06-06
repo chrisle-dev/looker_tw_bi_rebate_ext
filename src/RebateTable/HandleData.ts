@@ -250,7 +250,8 @@ export function calculateSavedArtifactValues(
     }
     let balance = customerInfo.woRebate;
     customerInfo.skuInfos.forEach((skuInfo) => {
-      const recmRbtAmtKey = Object.keys(skuInfo).find((k) => k.endsWith(RECOMMENDED_REBATE_AMT_FIELD_NAME)) || '';
+      const recmRbtAmtKey =
+        Object.keys(skuInfo.fieldsData).find((k) => k.endsWith(RECOMMENDED_REBATE_AMT_FIELD_NAME)) || '';
       const recommededRebateAmt = skuInfo.fieldsData[recmRbtAmtKey].value;
       const artifactValue: Partial<Record<CustomFieldName, any>> = {
         ...DEFAULT_CUSTOM_FIELD_VALUES,
