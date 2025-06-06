@@ -260,7 +260,7 @@ export function calculateSavedArtifactValues(
       artifactValue[CustomFieldName.RebateAmt] = calculateRebateAmount(artifactValue, recommededRebateAmt);
       balance -= artifactValue[CustomFieldName.RebateAmt];
       artifactValue[CustomFieldName.Balance] = balance;
-      artifactValue[CustomFieldName.BalancePercentage] = (balance / customerInfo.woRebate) * 100;
+      artifactValue[CustomFieldName.BalancePercentage] = (balance / customerInfo.woRebate) * 100 || 0;
       result[customerInfo.customer].value[skuInfo.uidKey] = artifactValue;
     });
   });
