@@ -324,6 +324,9 @@ export function getSavableArtifacts(
   customerInfos: CustomeInfo[],
   filters: Record<string, any>,
 ): Partial<IUpdateArtifact[]> {
+  console.log('updates', updates);
+  console.log('current', current);
+  console.log('customerInfos', customerInfos);
   const result: Partial<IUpdateArtifact[]> = [];
   if (isEmptyObj(updates)) return result;
   Object.keys(updates).forEach((customer) => {
@@ -346,7 +349,7 @@ export function getSavableArtifacts(
         const skuFieldsData = customerData?.skuInfos.find((s) => s.uidKey === uidKey)?.fieldsData || {};
         Object.keys(skuFieldsData).forEach((fieldName) => {
           if (EXTRA_SAVABLE_FIELDS.some((ef) => fieldName.endsWith(ef))) {
-            tbdSku[skuFieldsData[fieldName].name] = skuFieldsData[fieldName].value;
+            tbdSku[skuFieldsData[fieldName].label] = skuFieldsData[fieldName].value;
           }
         });
         toBeUpdated[uidKey] = tbdSku;
