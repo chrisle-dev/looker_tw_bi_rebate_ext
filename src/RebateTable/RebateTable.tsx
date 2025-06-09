@@ -29,6 +29,7 @@ import {
   Button,
   MultiFunctionButton,
   ButtonOutline,
+  Divider,
 } from '@looker/components';
 import { Save as IconSave, Check as IconCheck } from '@styled-icons/material';
 import { ExtensionContext40 } from '@looker/extension-sdk-react';
@@ -45,6 +46,9 @@ import {
   getFilteredObject,
   encodeFilteredObject,
   chunk,
+  CheckBalanceAll,
+  CheckBalanceEach,
+  updateCheckBalanceAll,
 } from './HandleData';
 import { IUser } from '@looker/sdk';
 
@@ -52,6 +56,10 @@ const enum SaveState {
   Unsaved = 'unsaved',
   Saving = 'saving',
   Saved = 'saved',
+}
+
+function formatBalance(value: number) {
+  return value.toLocaleString();
 }
 
 const RebateTable = () => {
@@ -65,6 +73,13 @@ const RebateTable = () => {
   const [errMsg, setErrMsg] = useState('');
   const [saveState, setSaveState] = useState<SaveState>(SaveState.Unsaved);
   const artifactsRef = useRef<NamespaceArtifactValues>({});
+  const [checkBalance, setCheckBalance] = useState<CheckBalanceAll>({
+    _all: {
+      total: { total: 0, used: 0, remaining: 0 },
+      dm: { total: 0, used: 0, remaining: 0 },
+      nonDm: { total: 0, used: 0, remaining: 0 },
+    },
+  });
 
   const saveRefArtifacts = useCallback((customer: string, uid: string, data: Record<string, any>) => {
     artifactsRef.current = {
@@ -101,8 +116,9 @@ const RebateTable = () => {
           version: item.version as number,
         };
       });
-      const calculated = calculateSavedArtifactValues(customerInfos, newArtifacts);
-      setSavedArtifacts(calculated);
+      const { artifactValues, checkBalanceValues } = calculateSavedArtifactValues(customerInfos, newArtifacts);
+      setSavedArtifacts(artifactValues);
+      setCheckBalance(checkBalanceValues);
       artifactsRef.current = {};
       setSaveState(SaveState.Saved);
       setTimeout(() => {
@@ -133,12 +149,18 @@ const RebateTable = () => {
         }),
         {},
       );
-      const calculated = calculateSavedArtifactValues(customerInfos, reduced);
-      setSavedArtifacts(calculated);
+      const { artifactValues, checkBalanceValues } = calculateSavedArtifactValues(customerInfos, reduced);
+      setSavedArtifacts(artifactValues);
+      setCheckBalance(checkBalanceValues);
     } catch (error) {
       setErrMsg('An error occurred while getting artifacts. Please try again.');
       console.error('artifacts', error);
     }
+  };
+
+  const recalculateCheckBalance = (customerName: string, changed: CheckBalanceEach) => {
+    const newCheckBalance = updateCheckBalanceAll(customerName, checkBalance, changed);
+    setCheckBalance(newCheckBalance);
   };
 
   useEffect(() => {
@@ -194,7 +216,33 @@ const RebateTable = () => {
         </Space>
       ) : (
         <Box height="100%">
-          <Space justify="end" py="u2">
+          <Space between={true} py="u2">
+            <Box border="ui3">
+              <Box p="u1" bg="ui1">
+                <Span>Check Balance</Span>
+              </Box>
+              <Divider />
+              <Box p="u1">
+                <Span>
+                  Total Balance = {formatBalance(checkBalance._all.total.total)} -{' '}
+                  {formatBalance(checkBalance._all.total.used)} = {formatBalance(checkBalance._all.total.remaining)}
+                </Span>
+              </Box>
+              <Divider />
+              <Box p="u1">
+                <Span>
+                  DM Balance = {formatBalance(checkBalance._all.dm.total)} - {formatBalance(checkBalance._all.dm.used)}{' '}
+                  = {formatBalance(checkBalance._all.dm.remaining)}
+                </Span>
+              </Box>
+              <Divider />
+              <Box p="u1">
+                <Span>
+                  Non-DM Balance = {formatBalance(checkBalance._all.nonDm.total)} -{' '}
+                  {formatBalance(checkBalance._all.nonDm.used)} = {formatBalance(checkBalance._all.nonDm.remaining)}
+                </Span>
+              </Box>
+            </Box>
             <MultiFunctionButton swap={saveState === SaveState.Saved} alternate={SavedButton}>
               <Button
                 onClick={updateArtifacts}
@@ -227,6 +275,7 @@ const RebateTable = () => {
                     savedData={savedArtifacts[customerInfo.customer]?.value}
                     key={customerInfo.customer}
                     saveArtifactsLocal={saveRefArtifacts}
+                    updateCheckBalance={recalculateCheckBalance}
                   />
                 ))}
               </TableBody>
@@ -243,11 +292,13 @@ const RebateToCustomer = memo(function RebateToCustomer({
   customerInfo,
   savedData,
   saveArtifactsLocal,
+  updateCheckBalance,
 }: {
   fields: Field[];
   customerInfo: CustomeInfo;
   savedData: Record<string, any>;
   saveArtifactsLocal: (customer: string, uid: string, data: Record<string, any>) => void;
+  updateCheckBalance: (customer: string, changed: CheckBalanceEach) => void;
 }) {
   const [localValues, setLocalValues] = useState(savedData);
 
@@ -261,10 +312,11 @@ const RebateToCustomer = memo(function RebateToCustomer({
       ...newData[uid],
       ...data,
     };
-    const calculated = calculateSavedArtifactValues([customerInfo], {
+    const { artifactValues, checkBalanceValues } = calculateSavedArtifactValues([customerInfo], {
       [customerInfo.customer]: { value: newData, version: -1 },
     });
-    setLocalValues(calculated[customerInfo.customer].value);
+    updateCheckBalance(customerInfo.customer, checkBalanceValues[customerInfo.customer]);
+    setLocalValues(artifactValues[customerInfo.customer].value);
     saveArtifactsLocal(customerInfo.customer, uid, newData[uid]);
   };
 

@@ -2,9 +2,9 @@
 import { IUpdateArtifact } from '@looker/sdk';
 
 const UNIQUE_IDENTIFIER_FIELD_NAME = 'rebate_to_sku';
-const GROUP_FIELD1_NAME = 'rebate_to_customer';
-const GROUP_FIELD1B_NAME = 'weighted_outstanding_rebate';
-const GROUP_FIELD2_NAME = 'rebate_to_category';
+const CUSTOMER_FIELD_NAME = 'rebate_to_customer';
+const WO_REBATE_FIELD_NAME = 'weighted_outstanding_rebate';
+const CATEGORY_FIELD_NAME = 'rebate_to_category';
 const RECOMMENDED_REBATE_AMT_FIELD_NAME = 'recommended_rebate_amt';
 const ARTIFACT_VALUE_GROUP_KEY = 'Rebate to SKU';
 
@@ -62,6 +62,29 @@ type CustomerArtifactValues = { [uidBasedOnSKUName: string]: { [fieldLabel: stri
 
 export type NamespaceArtifactValues = {
   [keyBasedOnCustomerName: string]: { value: CustomerArtifactValues; version: number };
+};
+
+export type CheckBalanceEach = {
+  total: {
+    total: number;
+    used: number;
+    remaining: number;
+  };
+  dm: {
+    total: number;
+    used: number;
+    remaining: number;
+  };
+  nonDm: {
+    total: number;
+    used: number;
+    remaining: number;
+  };
+};
+
+export type CheckBalanceAll = {
+  _all: CheckBalanceEach;
+  [key: string]: CheckBalanceEach;
 };
 
 export const CUSTOM_FIELDS: Field[] = [
@@ -141,9 +164,9 @@ const EXTRA_SAVABLE_FIELDS = [
 export const HIDDEN_FIELDS = ['contract_group'];
 
 export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo[] {
-  const gf1 = String(fields.find((f) => f.name.endsWith(GROUP_FIELD1_NAME))?.name);
-  const gf1b = String(fields.find((f) => f.name.endsWith(GROUP_FIELD1B_NAME))?.name);
-  const gf2 = String(fields.find((f) => f.name.endsWith(GROUP_FIELD2_NAME))?.name);
+  const gf1 = String(fields.find((f) => f.name.endsWith(CUSTOMER_FIELD_NAME))?.name);
+  const gf1b = String(fields.find((f) => f.name.endsWith(WO_REBATE_FIELD_NAME))?.name);
+  const gf2 = String(fields.find((f) => f.name.endsWith(CATEGORY_FIELD_NAME))?.name);
   const gf3 = String(fields.find((f) => f.name.endsWith(UNIQUE_IDENTIFIER_FIELD_NAME))?.name);
   const rowSpanFields = [gf1, gf1b, gf2];
 
@@ -239,8 +262,29 @@ function getUidKey(skuName: string, currentSkus: SkuInfo[]) {
 export function calculateSavedArtifactValues(
   customerInfos: CustomeInfo[],
   customFieldsData: NamespaceArtifactValues,
-): NamespaceArtifactValues {
+): { artifactValues: NamespaceArtifactValues; checkBalanceValues: CheckBalanceAll } {
+  const checkBalanceValues: CheckBalanceAll = {
+    _all: {
+      total: {
+        total: 0,
+        used: 0,
+        remaining: 0,
+      },
+      dm: {
+        total: 0,
+        used: 0,
+        remaining: 0,
+      },
+      nonDm: {
+        total: 0,
+        used: 0,
+        remaining: 0,
+      },
+    },
+  };
   const result = { ...customFieldsData };
+  let recmRbtAmtKey = '';
+  let categoryKey = '';
   customerInfos.forEach((customerInfo) => {
     result[customerInfo.customer] = {
       ...result[customerInfo.customer],
@@ -248,24 +292,94 @@ export function calculateSavedArtifactValues(
     if (!result[customerInfo.customer].value) {
       result[customerInfo.customer].value = {};
     }
+    checkBalanceValues[customerInfo.customer] = {
+      total: {
+        total: 0,
+        used: 0,
+        remaining: 0,
+      },
+      dm: {
+        total: 0,
+        used: 0,
+        remaining: 0,
+      },
+      nonDm: {
+        total: 0,
+        used: 0,
+        remaining: 0,
+      },
+    };
     let balance = customerInfo.woRebate;
     customerInfo.skuInfos.forEach((skuInfo) => {
-      const recmRbtAmtKey =
-        Object.keys(skuInfo.fieldsData).find((k) => k.endsWith(RECOMMENDED_REBATE_AMT_FIELD_NAME)) || '';
+      recmRbtAmtKey =
+        recmRbtAmtKey ||
+        Object.keys(skuInfo.fieldsData).find((k) => k.endsWith(RECOMMENDED_REBATE_AMT_FIELD_NAME)) ||
+        '';
+      categoryKey = categoryKey || Object.keys(skuInfo.fieldsData).find((k) => k.endsWith(CATEGORY_FIELD_NAME)) || '';
       const recommededRebateAmt = skuInfo.fieldsData[recmRbtAmtKey].value;
+      const isDM = skuInfo.fieldsData[categoryKey].value === 'DM';
       const artifactValue: Partial<Record<CustomFieldName, any>> = {
         ...DEFAULT_CUSTOM_FIELD_VALUES,
         ...result[customerInfo.customer].value[skuInfo.uidKey],
       };
       artifactValue[CustomFieldName.RebateAmt] = calculateRebateAmount(artifactValue, recommededRebateAmt);
+      if (isDM) {
+        checkBalanceValues[customerInfo.customer].dm.total += recommededRebateAmt;
+        checkBalanceValues[customerInfo.customer].dm.used += artifactValue[CustomFieldName.RebateAmt];
+      } else {
+        checkBalanceValues[customerInfo.customer].nonDm.total += recommededRebateAmt;
+        checkBalanceValues[customerInfo.customer].nonDm.used += artifactValue[CustomFieldName.RebateAmt];
+      }
       balance -= artifactValue[CustomFieldName.RebateAmt];
       artifactValue[CustomFieldName.Balance] = balance;
       artifactValue[CustomFieldName.BalancePercentage] = (balance / customerInfo.woRebate) * 100 || 0;
       result[customerInfo.customer].value[skuInfo.uidKey] = artifactValue;
     });
   });
+  calculateCheckBalanceAll(checkBalanceValues);
+  return { artifactValues: result, checkBalanceValues };
+}
 
-  return result;
+function calculateCheckBalanceAll(balance: CheckBalanceAll): CheckBalanceAll {
+  const { _all, ...rest } = balance;
+  Object.keys(rest).forEach((customerName: string) => {
+    const values = rest[customerName];
+    values.dm.remaining = values.dm.total - values.dm.used;
+    values.nonDm.remaining = values.nonDm.total - values.nonDm.used;
+    _all.dm.total += values.dm.total;
+    _all.dm.used += values.dm.used;
+    _all.nonDm.total += values.nonDm.total;
+    _all.nonDm.used += values.nonDm.used;
+    balance[customerName] = values;
+  });
+  _all.total.total = _all.dm.total + _all.nonDm.total;
+  _all.total.used = _all.dm.used + _all.nonDm.used;
+  _all.total.remaining = _all.total.total - _all.total.used;
+  _all.dm.remaining = _all.dm.total - _all.dm.used;
+  _all.nonDm.remaining = _all.nonDm.total - _all.nonDm.used;
+  balance._all = _all;
+  return balance;
+}
+
+export function updateCheckBalanceAll(
+  customerName: string,
+  currentBalance: CheckBalanceAll,
+  changedEach: CheckBalanceEach,
+): CheckBalanceAll {
+  const balance = { ...currentBalance };
+  const currentEach = balance[customerName];
+  if (!currentEach) return balance;
+  balance._all.dm.total = balance._all.dm.total - currentEach.dm.total + changedEach.dm.total;
+  balance._all.dm.used = balance._all.dm.used - currentEach.dm.used + changedEach.dm.used;
+  balance._all.dm.remaining = balance._all.dm.total - balance._all.dm.used;
+  balance._all.nonDm.total = balance._all.nonDm.total - currentEach.nonDm.total + changedEach.nonDm.total;
+  balance._all.nonDm.used = balance._all.nonDm.used - currentEach.nonDm.used + changedEach.nonDm.used;
+  balance._all.nonDm.remaining = balance._all.nonDm.total - balance._all.nonDm.used;
+  balance._all.total.total = balance._all.total.total - currentEach.total.total + changedEach.total.total;
+  balance._all.total.used = balance._all.total.used - currentEach.total.used + changedEach.total.used;
+  balance._all.total.remaining =
+    balance._all.total.remaining - currentEach.total.remaining + changedEach.total.remaining;
+  return balance;
 }
 
 function calculateRebateAmount(artifactValue: Partial<Record<CustomFieldName, any>>, recommendedAmt: number): number {
