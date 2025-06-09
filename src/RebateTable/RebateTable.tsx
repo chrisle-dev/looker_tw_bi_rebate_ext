@@ -254,7 +254,7 @@ const RebateTable = () => {
               </Button>
             </MultiFunctionButton>
           </Space>
-          <Box height="calc(100% - 50px)" overflow="auto">
+          <Box height="calc(100% - 120px)" overflow="auto">
             <Table className="rebate-table" mt="u2">
               <TableHead>
                 <TableRow>
