@@ -369,7 +369,7 @@ export function updateCheckBalanceAll(
   currentBalance: CheckBalanceAll,
   changedEach: CheckBalanceEach,
 ): CheckBalanceAll {
-  const balance = { ...currentBalance };
+  const balance = deepClone(currentBalance);
   const currentEach = balance[customerName];
   if (!currentEach) return balance;
   balance._all.dm.total = balance._all.dm.total - currentEach.dm.total + changedEach.dm.total;
@@ -511,4 +511,16 @@ function isSubset(child: Record<string, any>, parent: Record<string, any>) {
     }
   }
   return true;
+}
+
+export function deepClone(src: any): any {
+  if (src === null || typeof src !== 'object') return src;
+  if (Array.isArray(src)) return src.map(deepClone);
+  const copy: Record<string, any> = {};
+  for (const key in src) {
+    if (src.hasOwnProperty(key)) {
+      copy[key] = deepClone(src[key]);
+    }
+  }
+  return copy;
 }

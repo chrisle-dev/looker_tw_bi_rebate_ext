@@ -49,6 +49,7 @@ import {
   CheckBalanceAll,
   CheckBalanceEach,
   updateCheckBalanceAll,
+  deepClone,
 } from './HandleData';
 import { IUser } from '@looker/sdk';
 
@@ -159,6 +160,8 @@ const RebateTable = () => {
   };
 
   const recalculateCheckBalance = (customerName: string, changed: CheckBalanceEach) => {
+    console.log('[RebateTable] current', deepClone(checkBalance[customerName]));
+    console.log('[RebateTable] changed', deepClone(changed));
     const newCheckBalance = updateCheckBalanceAll(customerName, checkBalance, changed);
     setCheckBalance(newCheckBalance);
   };
