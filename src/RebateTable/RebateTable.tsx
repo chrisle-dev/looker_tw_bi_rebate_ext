@@ -389,7 +389,6 @@ const CustomField = ({
       {field.type === 'text' && <Span>{rendered}</Span>}
       {field.type === 'select' && (
         <Select
-          fontSize={'xsmall'}
           minWidth={100}
           value={localValue}
           options={field.options}
@@ -398,7 +397,6 @@ const CustomField = ({
       )}
       {field.type === 'inputnumber' && (
         <InputText
-          className="fg-cd-input"
           type="number"
           minWidth={100}
           value={localValue}
