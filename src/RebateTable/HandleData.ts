@@ -166,6 +166,8 @@ const EXTRA_SAVABLE_FIELDS = [
 export const HIDDEN_FIELDS = ['contract_group'];
 
 export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomerInfo[] {
+  console.log('data', data);
+  console.log('fields', fields);
   const gf1 = String(fields.find((f) => f.name.endsWith(CUSTOMER_FIELD_NAME))?.name);
   const gf1b = String(fields.find((f) => f.name.endsWith(WO_REBATE_FIELD_NAME))?.name);
   const gf2 = String(fields.find((f) => f.name.endsWith(CATEGORY_FIELD_NAME))?.name);
@@ -247,12 +249,14 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomerInf
       fieldsData: values,
     });
   });
-
-  customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1].rowSpan = rowSpanMap['customer'];
-  customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1b].rowSpan = rowSpanMap['customer'];
-  customerResult[customerResult.length - 1].skuInfos[
-    customerResult[customerResult.length - 1].skuInfos.length - rowSpanMap['category']
-  ].fieldsData[gf2].rowSpan = rowSpanMap['category'];
+  console.log('customerResult', customerResult);
+  if (customerResult.length) {
+    customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1].rowSpan = rowSpanMap['customer'];
+    customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1b].rowSpan = rowSpanMap['customer'];
+    customerResult[customerResult.length - 1].skuInfos[
+      customerResult[customerResult.length - 1].skuInfos.length - rowSpanMap['category']
+    ].fieldsData[gf2].rowSpan = rowSpanMap['category'];
+  }
   return customerResult;
 }
 
