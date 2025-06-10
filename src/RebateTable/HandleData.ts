@@ -263,7 +263,7 @@ export function calculateSavedArtifactValues(
   customerInfos: CustomeInfo[],
   customFieldsData: NamespaceArtifactValues,
 ): { artifactValues: NamespaceArtifactValues; checkBalanceValues: CheckBalanceAll } {
-  const checkBalanceValues: CheckBalanceAll = {
+  let checkBalanceValues: CheckBalanceAll = {
     _all: {
       total: {
         total: 0,
@@ -336,7 +336,7 @@ export function calculateSavedArtifactValues(
       result[customerInfo.customer].value[skuInfo.uidKey] = artifactValue;
     });
   });
-  calculateCheckBalanceAll(checkBalanceValues);
+  checkBalanceValues = calculateCheckBalanceAll(checkBalanceValues);
   return { artifactValues: result, checkBalanceValues };
 }
 
@@ -346,17 +346,20 @@ function calculateCheckBalanceAll(balance: CheckBalanceAll): CheckBalanceAll {
     const values = rest[customerName];
     values.dm.remaining = values.dm.total - values.dm.used;
     values.nonDm.remaining = values.nonDm.total - values.nonDm.used;
+    values.total.total = values.dm.total + values.nonDm.total;
+    values.total.used = values.dm.used + values.nonDm.used;
+    values.total.remaining = values.total.total - values.total.used;
     _all.dm.total += values.dm.total;
     _all.dm.used += values.dm.used;
     _all.nonDm.total += values.nonDm.total;
     _all.nonDm.used += values.nonDm.used;
     balance[customerName] = values;
   });
+  _all.dm.remaining = _all.dm.total - _all.dm.used;
+  _all.nonDm.remaining = _all.nonDm.total - _all.nonDm.used;
   _all.total.total = _all.dm.total + _all.nonDm.total;
   _all.total.used = _all.dm.used + _all.nonDm.used;
   _all.total.remaining = _all.total.total - _all.total.used;
-  _all.dm.remaining = _all.dm.total - _all.dm.used;
-  _all.nonDm.remaining = _all.nonDm.total - _all.nonDm.used;
   balance._all = _all;
   return balance;
 }
@@ -372,13 +375,16 @@ export function updateCheckBalanceAll(
   balance._all.dm.total = balance._all.dm.total - currentEach.dm.total + changedEach.dm.total;
   balance._all.dm.used = balance._all.dm.used - currentEach.dm.used + changedEach.dm.used;
   balance._all.dm.remaining = balance._all.dm.total - balance._all.dm.used;
+
   balance._all.nonDm.total = balance._all.nonDm.total - currentEach.nonDm.total + changedEach.nonDm.total;
   balance._all.nonDm.used = balance._all.nonDm.used - currentEach.nonDm.used + changedEach.nonDm.used;
   balance._all.nonDm.remaining = balance._all.nonDm.total - balance._all.nonDm.used;
+
   balance._all.total.total = balance._all.total.total - currentEach.total.total + changedEach.total.total;
   balance._all.total.used = balance._all.total.used - currentEach.total.used + changedEach.total.used;
   balance._all.total.remaining =
     balance._all.total.remaining - currentEach.total.remaining + changedEach.total.remaining;
+
   return balance;
 }
 
