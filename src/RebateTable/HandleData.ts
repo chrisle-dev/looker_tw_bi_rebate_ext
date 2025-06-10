@@ -443,9 +443,6 @@ export function getSavableArtifacts(
   customerInfos: CustomeInfo[],
   filters: Record<string, any>,
 ): Partial<IUpdateArtifact[]> {
-  console.log('updates', updates);
-  console.log('current', current);
-  console.log('customerInfos', customerInfos);
   const result: Partial<IUpdateArtifact[]> = [];
   if (isEmptyObj(updates)) return result;
   Object.keys(updates).forEach((customer) => {
@@ -522,4 +519,12 @@ function deepClone(src: any): any {
     }
   }
   return copy;
+}
+
+export function debounce(func: (...args: any[]) => void, wait: number): (...args: any[]) => void {
+  let timeout: NodeJS.Timeout | null = null;
+  return function (...args: any[]) {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
 }

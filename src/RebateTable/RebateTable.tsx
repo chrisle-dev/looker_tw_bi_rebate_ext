@@ -37,6 +37,7 @@ import {
   CheckBalanceAll,
   CheckBalanceEach,
   updateCheckBalanceAll,
+  debounce,
 } from './HandleData';
 
 const enum SaveState {
@@ -293,18 +294,25 @@ const RebateToCustomer = memo(function RebateToCustomer({
     setLocalValues(savedData);
   }, [savedData]);
 
-  const saveDataLocal = (uid: string, data: Record<string, any>) => {
-    const newData = { ...localValues };
-    newData[uid] = {
-      ...newData[uid],
-      ...data,
-    };
+  const calculateBalances = (uid: string, newData: Record<string, any>) => {
     const { artifactValues, checkBalanceValues } = calculateSavedArtifactValues([customerInfo], {
       [customerInfo.customer]: { value: newData, version: -1 },
     });
     updateCheckBalance(customerInfo.customer, checkBalanceValues[customerInfo.customer]);
     setLocalValues(artifactValues[customerInfo.customer].value);
     saveArtifactsLocal(customerInfo.customer, uid, newData[uid]);
+  };
+
+  const calculateBalancesDebounced = debounce(calculateBalances, 250);
+
+  const saveDataLocal = (uid: string, data: Record<string, any>) => {
+    const newData = { ...localValues };
+    newData[uid] = {
+      ...newData[uid],
+      ...data,
+    };
+    setLocalValues(newData);
+    calculateBalancesDebounced(uid, newData);
   };
 
   return (
@@ -362,6 +370,7 @@ const CustomField = ({
 }) => {
   const localValue = data?.[field.name] ?? field.defaultValue;
   const rendered = field.render ? field.render(localValue) : localValue;
+
   return (
     <>
       {field.type === 'text' && <Span>{rendered}</Span>}
@@ -376,7 +385,6 @@ const CustomField = ({
       {field.type === 'inputnumber' && (
         <InputText
           type="number"
-          min={0}
           minWidth={100}
           value={localValue}
           onChange={(e) => saveDataLocal(uid, { [field.name]: Number(e.target.value || 0) })}
