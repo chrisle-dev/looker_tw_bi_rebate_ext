@@ -23,7 +23,7 @@ import { ExtensionContext40 } from '@looker/extension-sdk-react';
 import { IUser } from '@looker/sdk';
 import {
   Field,
-  CustomeInfo,
+  CustomerInfo,
   calculateSavedArtifactValues,
   CUSTOM_FIELDS,
   sortAndGroupQueryData,
@@ -54,7 +54,7 @@ const RebateTable = () => {
   const { extensionSDK, visualizationData, coreSDK, tileHostData } = useContext(ExtensionContext40);
   const [fields, setFields] = useState<Field[]>([]);
   const [userInfo, setUserInfo] = useState<IUser>();
-  const [customerInfos, setCustomerInfos] = useState<CustomeInfo[]>([]);
+  const [customerInfos, setCustomerInfos] = useState<CustomerInfo[]>([]);
   const [artifactKeys, setArtifactKeys] = useState<string>();
   const [savedArtifacts, setSavedArtifacts] = useState<NamespaceArtifactValues>({});
   const [artifactNS, setArtifactNS] = useState<string>('');
@@ -150,6 +150,22 @@ const RebateTable = () => {
     const newCheckBalance = updateCheckBalanceAll(customerName, checkBalance, changed);
     setCheckBalance(newCheckBalance);
   };
+
+  const calculateBalances = (
+    customerInfo: CustomerInfo,
+    uid: string,
+    data: Record<string, any>,
+    cb: (newValue: Record<string, any>) => void,
+  ) => {
+    const { artifactValues, checkBalanceValues } = calculateSavedArtifactValues([customerInfo], {
+      [customerInfo.customer]: { value: data, version: -1 },
+    });
+    recalculateCheckBalance(customerInfo.customer, checkBalanceValues[customerInfo.customer]);
+    saveRefArtifacts(customerInfo.customer, uid, data[uid]);
+    cb(artifactValues[customerInfo.customer].value);
+  };
+
+  const calculateBalancesDebounced = debounce(calculateBalances, 500);
 
   useEffect(() => {
     const getMe = async () => {
@@ -262,8 +278,9 @@ const RebateTable = () => {
                     customerInfo={customerInfo}
                     savedData={savedArtifacts[customerInfo.customer]?.value}
                     key={customerInfo.customer}
-                    saveArtifactsLocal={saveRefArtifacts}
-                    updateCheckBalance={recalculateCheckBalance}
+                    // saveArtifactsLocal={saveRefArtifacts}
+                    // updateCheckBalance={recalculateCheckBalance}
+                    calculateBalances={calculateBalancesDebounced}
                   />
                 ))}
               </TableBody>
@@ -279,31 +296,23 @@ const RebateToCustomer = memo(function RebateToCustomer({
   fields,
   customerInfo,
   savedData,
-  saveArtifactsLocal,
-  updateCheckBalance,
+  calculateBalances,
 }: {
   fields: Field[];
-  customerInfo: CustomeInfo;
+  customerInfo: CustomerInfo;
   savedData: Record<string, any>;
-  saveArtifactsLocal: (customer: string, uid: string, data: Record<string, any>) => void;
-  updateCheckBalance: (customer: string, changed: CheckBalanceEach) => void;
+  calculateBalances: (
+    customer: CustomerInfo,
+    uid: string,
+    data: Record<string, any>,
+    cb: (newValue: Record<string, any>) => void,
+  ) => void;
 }) {
   const [localValues, setLocalValues] = useState(savedData);
 
   useEffect(() => {
     setLocalValues(savedData);
   }, [savedData]);
-
-  const calculateBalances = (uid: string, newData: Record<string, any>) => {
-    const { artifactValues, checkBalanceValues } = calculateSavedArtifactValues([customerInfo], {
-      [customerInfo.customer]: { value: newData, version: -1 },
-    });
-    updateCheckBalance(customerInfo.customer, checkBalanceValues[customerInfo.customer]);
-    setLocalValues(artifactValues[customerInfo.customer].value);
-    saveArtifactsLocal(customerInfo.customer, uid, newData[uid]);
-  };
-
-  const calculateBalancesDebounced = useCallback(debounce(calculateBalances, 500), [customerInfo, savedData]);
 
   const saveDataLocal = (uid: string, data: Record<string, any>) => {
     const newData = { ...localValues };
@@ -312,7 +321,11 @@ const RebateToCustomer = memo(function RebateToCustomer({
       ...data,
     };
     setLocalValues(newData);
-    calculateBalancesDebounced(uid, newData);
+    calculateBalances(customerInfo, uid, newData, function (newValue: Record<string, any>) {
+      if (newValue) {
+        setLocalValues(newValue);
+      }
+    });
   };
 
   return (

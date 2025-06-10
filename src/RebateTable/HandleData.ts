@@ -44,7 +44,7 @@ export type FieldData = {
   verticalAlign?: any;
 };
 
-export type CustomeInfo = {
+export type CustomerInfo = {
   customer: string;
   woRebate: number;
   skuInfos: SkuInfo[];
@@ -163,7 +163,7 @@ const EXTRA_SAVABLE_FIELDS = [
 ];
 export const HIDDEN_FIELDS = ['contract_group'];
 
-export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo[] {
+export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomerInfo[] {
   const gf1 = String(fields.find((f) => f.name.endsWith(CUSTOMER_FIELD_NAME))?.name);
   const gf1b = String(fields.find((f) => f.name.endsWith(WO_REBATE_FIELD_NAME))?.name);
   const gf2 = String(fields.find((f) => f.name.endsWith(CATEGORY_FIELD_NAME))?.name);
@@ -182,7 +182,7 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomeInfo
     category: 0,
   };
 
-  const customerResult: CustomeInfo[] = [];
+  const customerResult: CustomerInfo[] = [];
 
   sortedItems.forEach((item, index) => {
     const customer = item[gf1].value;
@@ -260,7 +260,7 @@ function getUidKey(skuName: string, currentSkus: SkuInfo[]) {
 }
 
 export function calculateSavedArtifactValues(
-  customerInfos: CustomeInfo[],
+  customerInfos: CustomerInfo[],
   customFieldsData: NamespaceArtifactValues,
 ): { artifactValues: NamespaceArtifactValues; checkBalanceValues: CheckBalanceAll } {
   let checkBalanceValues: CheckBalanceAll = {
@@ -440,7 +440,7 @@ export function encodeFilteredObject(filters: AppliedFilters) {
 export function getSavableArtifacts(
   updates: NamespaceArtifactValues,
   current: NamespaceArtifactValues,
-  customerInfos: CustomeInfo[],
+  customerInfos: CustomerInfo[],
   filters: Record<string, any>,
 ): Partial<IUpdateArtifact[]> {
   const result: Partial<IUpdateArtifact[]> = [];
