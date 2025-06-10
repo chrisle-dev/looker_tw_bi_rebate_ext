@@ -366,25 +366,24 @@ function calculateCheckBalanceAll(balance: CheckBalanceAll): CheckBalanceAll {
 
 export function updateCheckBalanceAll(
   customerName: string,
-  currentBalance: CheckBalanceAll,
-  changedEach: CheckBalanceEach,
+  currentBalanceAll: CheckBalanceAll,
+  changedOne: CheckBalanceEach,
 ): CheckBalanceAll {
-  const balance = deepClone(currentBalance);
-  const currentEach = balance[customerName];
-  if (!currentEach) return balance;
-  balance._all.dm.total = balance._all.dm.total - currentEach.dm.total + changedEach.dm.total;
-  balance._all.dm.used = balance._all.dm.used - currentEach.dm.used + changedEach.dm.used;
+  const balance = deepClone(currentBalanceAll);
+  const currentCus = balance[customerName];
+  if (!currentCus) return balance;
+  balance._all.dm.total = balance._all.dm.total - currentCus.dm.total + changedOne.dm.total;
+  balance._all.dm.used = balance._all.dm.used - currentCus.dm.used + changedOne.dm.used;
   balance._all.dm.remaining = balance._all.dm.total - balance._all.dm.used;
 
-  balance._all.nonDm.total = balance._all.nonDm.total - currentEach.nonDm.total + changedEach.nonDm.total;
-  balance._all.nonDm.used = balance._all.nonDm.used - currentEach.nonDm.used + changedEach.nonDm.used;
+  balance._all.nonDm.total = balance._all.nonDm.total - currentCus.nonDm.total + changedOne.nonDm.total;
+  balance._all.nonDm.used = balance._all.nonDm.used - currentCus.nonDm.used + changedOne.nonDm.used;
   balance._all.nonDm.remaining = balance._all.nonDm.total - balance._all.nonDm.used;
 
-  balance._all.total.total = balance._all.total.total - currentEach.total.total + changedEach.total.total;
-  balance._all.total.used = balance._all.total.used - currentEach.total.used + changedEach.total.used;
-  balance._all.total.remaining =
-    balance._all.total.remaining - currentEach.total.remaining + changedEach.total.remaining;
-
+  balance._all.total.total = balance._all.total.total - currentCus.total.total + changedOne.total.total;
+  balance._all.total.used = balance._all.total.used - currentCus.total.used + changedOne.total.used;
+  balance._all.total.remaining = balance._all.total.remaining - currentCus.total.remaining + changedOne.total.remaining;
+  balance[customerName] = changedOne;
   return balance;
 }
 
@@ -513,7 +512,7 @@ function isSubset(child: Record<string, any>, parent: Record<string, any>) {
   return true;
 }
 
-export function deepClone(src: any): any {
+function deepClone(src: any): any {
   if (src === null || typeof src !== 'object') return src;
   if (Array.isArray(src)) return src.map(deepClone);
   const copy: Record<string, any> = {};
