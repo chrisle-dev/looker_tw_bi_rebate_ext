@@ -303,7 +303,7 @@ const RebateToCustomer = memo(function RebateToCustomer({
     saveArtifactsLocal(customerInfo.customer, uid, newData[uid]);
   };
 
-  const calculateBalancesDebounced = debounce(calculateBalances, 250);
+  const calculateBalancesDebounced = debounce(calculateBalances, 500);
 
   const saveDataLocal = (uid: string, data: Record<string, any>) => {
     const newData = { ...localValues };
