@@ -1,10 +1,10 @@
 .tw-bi-rebate-ext {
   .rebate-table {
-    border-collapse: collapse;
     th {
       white-space: pre-line;
     }
     td {
+      min-width: 70px;
       max-width: 200px;
       white-space: nowrap;
       text-overflow: ellipsis;

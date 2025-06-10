@@ -278,8 +278,6 @@ const RebateTable = () => {
                     customerInfo={customerInfo}
                     savedData={savedArtifacts[customerInfo.customer]?.value}
                     key={customerInfo.customer}
-                    // saveArtifactsLocal={saveRefArtifacts}
-                    // updateCheckBalance={recalculateCheckBalance}
                     calculateBalances={calculateBalancesDebounced}
                   />
                 ))}
@@ -354,6 +352,8 @@ const RebateToCustomer = memo(function RebateToCustomer({
               p="u1"
               textAlign={f.align}
               verticalAlign="middle"
+              minWidth={f.minWidth}
+              maxWidth={f.maxWidth}
               key={`${customerInfo.customer}_${skuInfo.uidKey}_${f.name}`}
             >
               <CustomField

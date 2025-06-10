@@ -32,6 +32,8 @@ export type Field = {
   savable?: boolean;
   hidden?: boolean;
   render?: (value: any) => any;
+  minWidth?: number;
+  maxWidth?: number;
 };
 
 export type FieldData = {
