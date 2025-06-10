@@ -389,7 +389,8 @@ const CustomField = ({
       {field.type === 'text' && <Span>{rendered}</Span>}
       {field.type === 'select' && (
         <Select
-          minWidth={150}
+          fontSize={'xsmall'}
+          minWidth={100}
           value={localValue}
           options={field.options}
           onChange={(value) => saveDataLocal(uid, { [field.name]: value })}
@@ -397,6 +398,7 @@ const CustomField = ({
       )}
       {field.type === 'inputnumber' && (
         <InputText
+          className="fg-cd-input"
           type="number"
           minWidth={100}
           value={localValue}
