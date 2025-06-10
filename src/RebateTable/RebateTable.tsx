@@ -185,6 +185,7 @@ const RebateTable = () => {
   // sort & group query response data
   useEffect(() => {
     if (!visualizationData?.queryResponse || !userInfo) return;
+    console.log('visualizationData?.queryResponse', visualizationData?.queryResponse);
     const displayedFields: Field[] = [
       ...visualizationData.queryResponse.fields['dimensions'],
       ...visualizationData.queryResponse.fields['measures'],
