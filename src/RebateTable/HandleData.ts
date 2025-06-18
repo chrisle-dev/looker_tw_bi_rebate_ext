@@ -535,9 +535,11 @@ export function debounce(func: (...args: any[]) => void, wait: number): (...args
   };
 }
 
-export async function sha256(source: string) {
-  const sourceBytes = new TextEncoder().encode(source);
-  const digest = await crypto.subtle.digest('SHA-256', sourceBytes);
-  const resultBytes = [...new Uint8Array(digest)];
-  return resultBytes.map((x) => x.toString(16).padStart(2, '0')).join('');
+export async function sha256(input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
 }
