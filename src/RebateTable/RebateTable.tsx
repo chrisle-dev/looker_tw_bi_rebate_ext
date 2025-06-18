@@ -38,6 +38,7 @@ import {
   CheckBalanceEach,
   updateCheckBalanceAll,
   debounce,
+  sha256,
 } from './HandleData';
 
 const enum SaveState {
@@ -183,7 +184,7 @@ const RebateTable = () => {
   }, []);
 
   // sort & group query response data
-  useEffect(() => {
+  useEffect(async () => {
     if (!visualizationData?.queryResponse || !userInfo) return;
     console.log('visualizationData?.queryResponse', visualizationData?.queryResponse);
     const displayedFields: Field[] = [
@@ -197,8 +198,9 @@ const RebateTable = () => {
     }));
     const custInfo = sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields);
     const encodedFilter = encodeFilteredObject(visualizationData.queryResponse.applied_filters);
+    const hashedFilter = await sha256(encodedFilter);
     const username = String(userInfo.email).split('@')[0];
-    const namespace = `tw_bi_rebate_ext_${username}_${userInfo.id}_${tileHostData.dashboardId}_${tileHostData.elementId}${encodedFilter}`;
+    const namespace = `tw_bi_rebate_ext_${username}_${userInfo.id}_${tileHostData.dashboardId}_${tileHostData.elementId}_${hashedFilter}`;
     setFields(displayedFields);
     setCustomerInfos(custInfo);
     setArtifactKeys(custInfo.map((item) => item.customer).join(','));
