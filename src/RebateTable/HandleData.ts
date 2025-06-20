@@ -1,12 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { IUpdateArtifact } from '@looker/sdk';
 
-const UNIQUE_IDENTIFIER_FIELD_NAME = 'rebate_to_sku';
-const CUSTOMER_FIELD_NAME = 'rebate_to_customer';
-const WO_REBATE_FIELD_NAME = 'weighted_outstanding_rebate';
-const CATEGORY_FIELD_NAME = 'rebate_to_category';
-const RECOMMENDED_REBATE_AMT_FIELD_NAME = 'recommended_rebate_amt';
 const ARTIFACT_VALUE_GROUP_KEY = 'Rebate to SKU';
+
+enum FieldName {
+  ContractGroup = 'zanalyticstw_bi_rebate_consolidate_v3.contract_group',
+  RebateToSKU = 'zanalyticstw_bi_rebate_consolidate_v3.rebate_to_sku',
+  RebateToCustomer = 'zanalyticstw_bi_rebate_consolidate_v3.rebate_to_customer',
+  WoRebate = 'zanalyticstw_bi_rebate_consolidate_v3.weighted_outstanding_rebate',
+  RebateToCategory = 'zanalyticstw_bi_rebate_consolidate_v3.rebate_to_category',
+  RecRebateAmt = 'zanalyticstw_bi_rebate_consolidate_v3.recommended_rebate_amt',
+  CdPercentTotal = 'zanalyticstw_bi_rebate_consolidate_v3.cd_percent_total',
+  SumDimOutstandingRebate = 'zanalyticstw_bi_rebate_consolidate_v3.sum_outstanding_rebate_2',
+  SumOutstandingRebateDmNonFinal = 'zanalyticstw_bi_rebate_consolidate_v3.sum_outstanding_rebate_dm_non_final',
+}
 
 enum RebateType {
   FG = 'Free Goods (FG)',
@@ -155,24 +162,28 @@ const DEFAULT_CUSTOM_FIELD_VALUES = CUSTOM_FIELDS.filter((item) => item.savable)
   (acc, cur) => ({ ...acc, [cur.name]: cur.defaultValue }),
   {},
 );
-const SAVABLE_FIELDS = CUSTOM_FIELDS.filter((item) => item.savable).map((item) => item.name);
-const EXTRA_SAVABLE_FIELDS = [
-  'contract_group',
-  'rebate_to_customer',
-  'rebate_to_category',
-  'rebate_to_sku',
-  'cd_percent_total',
+const CUSTOM_SAVABLE_FIELD_NAMES = CUSTOM_FIELDS.filter((item) => item.savable).map((item) => item.name);
+const REQUIRED_SAVABLE_FIELD_NAMES: string[] = [
+  FieldName.ContractGroup,
+  FieldName.RebateToCustomer,
+  FieldName.RebateToCategory,
+  FieldName.RebateToSKU,
+  FieldName.CdPercentTotal,
 ];
-export const HIDDEN_FIELDS = ['contract_group'];
+export const HIDDEN_FIELDS: string[] = [
+  FieldName.ContractGroup,
+  FieldName.SumDimOutstandingRebate,
+  FieldName.SumOutstandingRebateDmNonFinal,
+];
 
 export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomerInfo[] {
   console.log('data', data);
   console.log('fields', fields);
-  const gf1 = String(fields.find((f) => f.name.endsWith(CUSTOMER_FIELD_NAME))?.name);
-  const gf1b = String(fields.find((f) => f.name.endsWith(WO_REBATE_FIELD_NAME))?.name);
-  const gf2 = String(fields.find((f) => f.name.endsWith(CATEGORY_FIELD_NAME))?.name);
-  const gf3 = String(fields.find((f) => f.name.endsWith(UNIQUE_IDENTIFIER_FIELD_NAME))?.name);
-  const rowSpanFields = [gf1, gf1b, gf2];
+  const gf1 = FieldName.RebateToCustomer;
+  const gf1b = FieldName.WoRebate;
+  const gf2 = FieldName.RebateToCategory;
+  const gf3 = FieldName.RebateToSKU;
+  const rowSpanFields: string[] = [gf1, gf1b, gf2];
 
   const sortedItems = data.sort((a, b) => {
     const ka = `${a[gf1].value}_${a[gf2].value}_${a[gf3].value}`;
@@ -289,8 +300,6 @@ export function calculateSavedArtifactValues(
     },
   };
   const result = { ...customFieldsData };
-  let recmRbtAmtKey = '';
-  let categoryKey = '';
   customerInfos.forEach((customerInfo) => {
     result[customerInfo.customer] = {
       ...result[customerInfo.customer],
@@ -317,23 +326,19 @@ export function calculateSavedArtifactValues(
     };
     let balance = customerInfo.woRebate;
     customerInfo.skuInfos.forEach((skuInfo) => {
-      recmRbtAmtKey =
-        recmRbtAmtKey ||
-        Object.keys(skuInfo.fieldsData).find((k) => k.endsWith(RECOMMENDED_REBATE_AMT_FIELD_NAME)) ||
-        '';
-      categoryKey = categoryKey || Object.keys(skuInfo.fieldsData).find((k) => k.endsWith(CATEGORY_FIELD_NAME)) || '';
-      const recommededRebateAmt = skuInfo.fieldsData[recmRbtAmtKey].value;
-      const isDM = skuInfo.fieldsData[categoryKey].value === 'DM';
+      const recommededRebateAmt = skuInfo.fieldsData[FieldName.RecRebateAmt].value;
+      const outRbtDmNonFinal = skuInfo.fieldsData[FieldName.SumOutstandingRebateDmNonFinal].value;
+      const isDM = skuInfo.fieldsData[FieldName.RebateToCategory].value === 'DM';
       const artifactValue: Partial<Record<CustomFieldName, any>> = {
         ...DEFAULT_CUSTOM_FIELD_VALUES,
         ...result[customerInfo.customer].value[skuInfo.uidKey],
       };
       artifactValue[CustomFieldName.RebateAmt] = calculateRebateAmount(artifactValue, recommededRebateAmt);
       if (isDM) {
-        checkBalanceValues[customerInfo.customer].dm.total += recommededRebateAmt;
+        checkBalanceValues[customerInfo.customer].dm.total = outRbtDmNonFinal;
         checkBalanceValues[customerInfo.customer].dm.used += artifactValue[CustomFieldName.RebateAmt];
       } else {
-        checkBalanceValues[customerInfo.customer].nonDm.total += recommededRebateAmt;
+        checkBalanceValues[customerInfo.customer].nonDm.total = outRbtDmNonFinal;
         checkBalanceValues[customerInfo.customer].nonDm.used += artifactValue[CustomFieldName.RebateAmt];
       }
       balance -= artifactValue[CustomFieldName.RebateAmt];
@@ -460,17 +465,14 @@ export function getSavableArtifacts(
     Object.keys(currentSkus)
       .sort((a, b) => a.localeCompare(b))
       .forEach((uidKey) => {
-        let tbdSku = pick({ ...currentSkus[uidKey], ...changedSkus[uidKey] }, SAVABLE_FIELDS);
-        if (isEmptyObj(tbdSku) || isSubset(tbdSku, DEFAULT_CUSTOM_FIELD_VALUES)) {
-          return;
-        }
+        let tbdSku = pick({ ...currentSkus[uidKey], ...changedSkus[uidKey] }, CUSTOM_SAVABLE_FIELD_NAMES);
         tbdSku = {
           ...DEFAULT_CUSTOM_FIELD_VALUES,
           ...tbdSku,
         };
         const skuFieldsData = customerData?.skuInfos.find((s) => s.uidKey === uidKey)?.fieldsData || {};
         Object.keys(skuFieldsData).forEach((fieldName) => {
-          if (EXTRA_SAVABLE_FIELDS.some((ef) => fieldName.endsWith(ef))) {
+          if (REQUIRED_SAVABLE_FIELD_NAMES.includes(fieldName)) {
             tbdSku[skuFieldsData[fieldName].label] = skuFieldsData[fieldName].value;
           }
         });
@@ -502,17 +504,6 @@ export function chunk<T>(arr: T[], size: number): T[][] {
 
 function isEmptyObj(obj: Record<string, any>): boolean {
   return Object.values(obj).filter((v) => v !== undefined).length === 0;
-}
-
-function isSubset(child: Record<string, any>, parent: Record<string, any>) {
-  const keys = Object.keys(child);
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    if (child[key] !== parent[key]) {
-      return false;
-    }
-  }
-  return true;
 }
 
 function deepClone(src: any): any {

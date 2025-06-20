@@ -194,7 +194,7 @@ const RebateTable = () => {
       label: item['label_short'],
       name: item['name'],
       align: item['align'],
-      hidden: HIDDEN_FIELDS.some((hf) => item['name'].endsWith(hf)),
+      hidden: HIDDEN_FIELDS.includes(item['name']),
     }));
     const custInfo = sortAndGroupQueryData(visualizationData.queryResponse.data, displayedFields);
     const username = String(userInfo.email).split('@')[0];
