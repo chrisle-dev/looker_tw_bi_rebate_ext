@@ -22,14 +22,14 @@ import { Save as IconSave, Check as IconCheck } from '@styled-icons/material';
 import { ExtensionContext40 } from '@looker/extension-sdk-react';
 import { IUser } from '@looker/sdk';
 import {
+  CUSTOM_FIELDS,
+  HIDDEN_FIELDS,
   Field,
   CustomerInfo,
   calculateSavedArtifactValues,
-  CUSTOM_FIELDS,
   sortAndGroupQueryData,
   getSavableArtifacts,
   NamespaceArtifactValues,
-  HIDDEN_FIELDS,
   decodeArtifactValue,
   getFilteredObject,
   encodeFilteredObject,
@@ -48,7 +48,7 @@ const enum SaveState {
 }
 
 function formatBalance(value: number) {
-  return value.toLocaleString();
+  return Math.floor(value).toLocaleString();
 }
 
 const RebateTable = () => {

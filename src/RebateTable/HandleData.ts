@@ -300,6 +300,7 @@ export function calculateSavedArtifactValues(
     },
   };
   const result = { ...customFieldsData };
+  let skuIdx = -1;
   customerInfos.forEach((customerInfo) => {
     result[customerInfo.customer] = {
       ...result[customerInfo.customer],
@@ -326,14 +327,17 @@ export function calculateSavedArtifactValues(
     };
     let balance = customerInfo.woRebate;
     customerInfo.skuInfos.forEach((skuInfo) => {
+      skuIdx++;
       const recommededRebateAmt = skuInfo.fieldsData[FieldName.RecRebateAmt].value;
       const outRbtDmNonFinal = skuInfo.fieldsData[FieldName.SumOutstandingRebateDmNonFinal].value;
+      const sumDimOutRbt = skuInfo.fieldsData[FieldName.SumDimOutstandingRebate].value;
       const isDM = skuInfo.fieldsData[FieldName.RebateToCategory].value === 'DM';
       const artifactValue: Partial<Record<CustomFieldName, any>> = {
         ...DEFAULT_CUSTOM_FIELD_VALUES,
         ...result[customerInfo.customer].value[skuInfo.uidKey],
       };
-      artifactValue[CustomFieldName.RebateAmt] = calculateRebateAmount(artifactValue, recommededRebateAmt);
+
+      artifactValue[CustomFieldName.RebateAmt] = calculateRebateAmount(artifactValue, recommededRebateAmt, skuIdx);
       if (isDM) {
         checkBalanceValues[customerInfo.customer].dm.total = outRbtDmNonFinal;
         checkBalanceValues[customerInfo.customer].dm.used += artifactValue[CustomFieldName.RebateAmt];
@@ -341,6 +345,7 @@ export function calculateSavedArtifactValues(
         checkBalanceValues[customerInfo.customer].nonDm.total = outRbtDmNonFinal;
         checkBalanceValues[customerInfo.customer].nonDm.used += artifactValue[CustomFieldName.RebateAmt];
       }
+      checkBalanceValues[customerInfo.customer].total.total = sumDimOutRbt;
       balance -= artifactValue[CustomFieldName.RebateAmt];
       artifactValue[CustomFieldName.Balance] = balance;
       artifactValue[CustomFieldName.BalancePercentage] = (balance / customerInfo.woRebate) * 100 || 0;
@@ -357,18 +362,17 @@ function calculateCheckBalanceAll(balance: CheckBalanceAll): CheckBalanceAll {
     const values = rest[customerName];
     values.dm.remaining = values.dm.total - values.dm.used;
     values.nonDm.remaining = values.nonDm.total - values.nonDm.used;
-    values.total.total = values.dm.total + values.nonDm.total;
     values.total.used = values.dm.used + values.nonDm.used;
     values.total.remaining = values.total.total - values.total.used;
     _all.dm.total += values.dm.total;
     _all.dm.used += values.dm.used;
     _all.nonDm.total += values.nonDm.total;
     _all.nonDm.used += values.nonDm.used;
+    _all.total.total += values.total.total;
     balance[customerName] = values;
   });
   _all.dm.remaining = _all.dm.total - _all.dm.used;
   _all.nonDm.remaining = _all.nonDm.total - _all.nonDm.used;
-  _all.total.total = _all.dm.total + _all.nonDm.total;
   _all.total.used = _all.dm.used + _all.nonDm.used;
   _all.total.remaining = _all.total.total - _all.total.used;
   balance._all = _all;
@@ -398,7 +402,12 @@ export function updateCheckBalanceAll(
   return balance;
 }
 
-function calculateRebateAmount(artifactValue: Partial<Record<CustomFieldName, any>>, recommendedAmt: number): number {
+function calculateRebateAmount(
+  artifactValue: Partial<Record<CustomFieldName, any>>,
+  recommendedAmt: number,
+  skuIdx: number,
+): number {
+  if (skuIdx >= 15) return 0;
   let value = artifactValue[CustomFieldName.QtyOrAmt];
   if (artifactValue[CustomFieldName.RebateType] === RebateType.FG) {
     value = artifactValue[CustomFieldName.QtyOrAmt] * artifactValue[CustomFieldName.SellingPrice];
