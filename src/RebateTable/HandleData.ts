@@ -368,7 +368,7 @@ function calculateCheckBalanceAll(balance: CheckBalanceAll): CheckBalanceAll {
     _all.dm.used += values.dm.used;
     _all.nonDm.total += values.nonDm.total;
     _all.nonDm.used += values.nonDm.used;
-    _all.total.total += values.total.total;
+    _all.total.total = values.total.total; // TODO: group by contract group
     balance[customerName] = values;
   });
   _all.dm.remaining = _all.dm.total - _all.dm.used;
