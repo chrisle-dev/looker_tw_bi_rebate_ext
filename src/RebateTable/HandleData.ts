@@ -54,6 +54,7 @@ export type FieldData = {
 };
 
 export type CustomerInfo = {
+  contractGroup: string;
   customer: string;
   woRebate: number;
   skuInfos: SkuInfo[];
@@ -89,6 +90,7 @@ export type CheckBalanceEach = {
     used: number;
     remaining: number;
   };
+  contractGroup: string;
 };
 
 export type CheckBalanceAll = {
@@ -203,6 +205,7 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomerInf
     const customer = item[gf1].value;
     const category = item[gf2].value;
     const woRebate = item[gf1b].value;
+    const contractGroup = item[FieldName.ContractGroup].value;
 
     if (customer !== lastCus) {
       if (index > 0) {
@@ -210,7 +213,8 @@ export function sortAndGroupQueryData(data: any[], fields: Field[]): CustomerInf
         customerResult[customerResult.length - 1].skuInfos[0].fieldsData[gf1b].rowSpan = rowSpanMap['customer'];
       }
       customerResult.push({
-        customer: customer,
+        contractGroup,
+        customer,
         woRebate: woRebate || 0,
         skuInfos: [],
       });
@@ -297,6 +301,7 @@ export function calculateSavedArtifactValues(
         used: 0,
         remaining: 0,
       },
+      contractGroup: '',
     },
   };
   const result = { ...customFieldsData };
@@ -324,6 +329,7 @@ export function calculateSavedArtifactValues(
         used: 0,
         remaining: 0,
       },
+      contractGroup: customerInfo.contractGroup,
     };
     let balance = customerInfo.woRebate;
     customerInfo.skuInfos.forEach((skuInfo) => {
@@ -357,6 +363,7 @@ export function calculateSavedArtifactValues(
 }
 
 function calculateCheckBalanceAll(balance: CheckBalanceAll): CheckBalanceAll {
+  const contractGroupUsedMap: Record<string, boolean> = {};
   const { _all, ...rest } = balance;
   Object.keys(rest).forEach((customerName: string) => {
     const values = rest[customerName];
@@ -368,7 +375,10 @@ function calculateCheckBalanceAll(balance: CheckBalanceAll): CheckBalanceAll {
     _all.dm.used += values.dm.used;
     _all.nonDm.total += values.nonDm.total;
     _all.nonDm.used += values.nonDm.used;
-    _all.total.total = values.total.total; // TODO: group by contract group
+    if (!contractGroupUsedMap[values.contractGroup]) {
+      contractGroupUsedMap[values.contractGroup] = true;
+      _all.total.total += values.total.total;
+    }
     balance[customerName] = values;
   });
   _all.dm.remaining = _all.dm.total - _all.dm.used;
