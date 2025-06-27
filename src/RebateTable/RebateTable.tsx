@@ -296,7 +296,8 @@ const RebateTable = () => {
   );
 };
 
-function formatAmount(input: string): string {
+function formatAmount(input: string | number): string {
+  input = String(input);
   if (!input) return '';
   const negativePrefix = input.startsWith('-') ? '-' : '';
   const point = input.indexOf('.') > -1 ? '.' : '';
