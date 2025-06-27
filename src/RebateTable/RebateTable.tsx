@@ -304,7 +304,10 @@ function formatAmount(input: string): string {
   return `${negativePrefix}${int ? Number(int).toLocaleString() : ''}${point}${frac || ''}`;
 }
 
-function amountNumber(input: string): number {
+function amountNumber(input: string | number): number {
+  if ('number' === typeof input) {
+    return input;
+  }
   if (input.endsWith('.')) {
     input = input.substring(0, input.length - 1);
   }
