@@ -26,16 +26,16 @@ import {
   HIDDEN_FIELDS,
   Field,
   CustomerInfo,
+  CheckBalanceAll,
+  CheckBalanceEach,
+  NamespaceArtifactValues,
   calculateSavedArtifactValues,
   sortAndGroupQueryData,
   getSavableArtifacts,
-  NamespaceArtifactValues,
   decodeArtifactValue,
   getFilteredObject,
   encodeFilteredObject,
   chunk,
-  CheckBalanceAll,
-  CheckBalanceEach,
   updateCheckBalanceAll,
   debounce,
   sha256,
@@ -295,6 +295,25 @@ const RebateTable = () => {
   );
 };
 
+function formatAmount(input: string): string {
+  if (!input) return '';
+  const negativePrefix = input.startsWith('-') ? '-' : '';
+  const point = input.indexOf('.') > -1 ? '.' : '';
+  const [int, frac] = input
+    .replace(/[^\d.]/g, '')
+    .split('.')
+    .filter((i) => !!i);
+  return `${negativePrefix}${Number(int || 0).toLocaleString()}${point}${frac || ''}`;
+}
+
+function amountNumber(input: string): number {
+  if (input.endsWith('.')) {
+    input = input.substring(0, input.length - 1);
+  }
+  input = input.replace(/,/g, '');
+  return Number(input);
+}
+
 const RebateToCustomer = memo(function RebateToCustomer({
   fields,
   customerInfo,
@@ -317,18 +336,28 @@ const RebateToCustomer = memo(function RebateToCustomer({
     setLocalValues(savedData);
   }, [savedData]);
 
-  const saveDataLocal = (uid: string, data: Record<string, any>) => {
+  const saveDataLocal = (uid: string, isNumber: boolean, data: Record<string, any>) => {
+    const fieldName = Object.keys(data)[0];
+    if (isNumber) {
+      const v = formatAmount(data[fieldName]);
+      data[fieldName] = v;
+    }
     const newData = { ...localValues };
     newData[uid] = {
       ...newData[uid],
       ...data,
     };
     setLocalValues(newData);
-    calculateBalances(customerInfo, uid, newData, function (newValue: Record<string, any>) {
-      if (newValue) {
-        setLocalValues(newValue);
-      }
-    });
+    calculateBalances(
+      customerInfo,
+      uid,
+      { ...newData, [fieldName]: isNumber ? amountNumber(data[fieldName]) : data[fieldName] },
+      function (newValue: Record<string, any>) {
+        if (newValue) {
+          setLocalValues(newValue);
+        }
+      },
+    );
   };
 
   return (
@@ -384,7 +413,7 @@ const CustomField = ({
   field: Field;
   uid: string;
   data: any;
-  saveDataLocal: (uid: string, data: Record<string, any>) => void;
+  saveDataLocal: (uid: string, isNumber: boolean, data: Record<string, any>) => void;
 }) => {
   const localValue = data?.[field.name] ?? field.defaultValue;
   const rendered = field.render ? field.render(localValue) : localValue;
@@ -397,15 +426,15 @@ const CustomField = ({
           minWidth={100}
           value={localValue}
           options={field.options}
-          onChange={(value) => saveDataLocal(uid, { [field.name]: value })}
+          onChange={(value) => saveDataLocal(uid, false, { [field.name]: value })}
         />
       )}
       {field.type === 'inputnumber' && (
         <InputText
-          type="number"
+          type="text"
           minWidth={100}
           value={localValue}
-          onChange={(e) => saveDataLocal(uid, { [field.name]: Number(e.target.value || 0) })}
+          onChange={(e) => saveDataLocal(uid, true, { [field.name]: e.target.value })}
         />
       )}
     </>
