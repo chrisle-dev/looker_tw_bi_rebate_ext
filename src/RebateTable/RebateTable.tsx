@@ -351,9 +351,19 @@ const RebateToCustomer = memo(function RebateToCustomer({
     calculateBalances(
       customerInfo,
       uid,
-      { ...newData, [fieldName]: isNumber ? amountNumber(data[fieldName]) : data[fieldName] },
+      {
+        ...newData,
+        [uid]: { ...newData[uid], [fieldName]: isNumber ? amountNumber(data[fieldName]) : data[fieldName] },
+      },
       function (newValue: Record<string, any>) {
         if (newValue) {
+          newValue = {
+            ...newValue,
+            [uid]: {
+              ...newValue[uid],
+              [fieldName]: data[fieldName],
+            },
+          };
           setLocalValues(newValue);
         }
       },
