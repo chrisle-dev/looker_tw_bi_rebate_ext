@@ -354,13 +354,19 @@ const RebateToCustomer = memo(function RebateToCustomer({
     setLocalValues(savedData);
   }, [savedData]);
 
-  const saveDataLocal = (uid: string, data: Record<string, any>) => {
+  const saveDataLocal = (uid: string, field: Field, data: Record<string, any>) => {
+    const oldValue = localValues[uid][field.name];
     const newData = { ...localValues };
     newData[uid] = {
       ...newData[uid],
       ...data,
     };
     setLocalValues(newData);
+    if (field.type === InputType.Number) {
+      if (amountNumber(oldValue) === amountNumber(data[field.name])) {
+        return;
+      }
+    }
     calculateBalances(customerInfo, uid, normalizeRebateData(newData), function (newValue: Record<string, any>) {
       if (newValue) {
         setLocalValues(newValue);
@@ -421,7 +427,7 @@ const CustomField = ({
   field: Field;
   uid: string;
   data: any;
-  saveDataLocal: (uid: string, data: Record<string, any>) => void;
+  saveDataLocal: (uid: string, field: Field, data: Record<string, any>) => void;
 }) => {
   let localValue = data?.[field.name] ?? field.defaultValue;
   if (field.type === InputType.Number) {
@@ -437,7 +443,7 @@ const CustomField = ({
           minWidth={100}
           value={localValue}
           options={field.options}
-          onChange={(value) => saveDataLocal(uid, { [field.name]: value })}
+          onChange={(value) => saveDataLocal(uid, field, { [field.name]: value })}
         />
       )}
       {field.type === InputType.Number && (
@@ -445,7 +451,7 @@ const CustomField = ({
           type="text"
           minWidth={100}
           value={localValue}
-          onChange={(e) => saveDataLocal(uid, { [field.name]: e.target.value })}
+          onChange={(e) => saveDataLocal(uid, field, { [field.name]: e.target.value })}
         />
       )}
     </>
