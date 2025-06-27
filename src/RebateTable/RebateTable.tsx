@@ -299,11 +299,8 @@ function formatAmount(input: string): string {
   if (!input) return '';
   const negativePrefix = input.startsWith('-') ? '-' : '';
   const point = input.indexOf('.') > -1 ? '.' : '';
-  const [int, frac] = input
-    .replace(/[^\d.]/g, '')
-    .split('.')
-    .filter((i) => !!i);
-  return `${negativePrefix}${Number(int || 0).toLocaleString()}${point}${frac || ''}`;
+  const [int, frac] = input.replace(/[^\d.]/g, '').split('.');
+  return `${negativePrefix}${int ? Number(int).toLocaleString() : ''}${point}${frac || ''}`;
 }
 
 function amountNumber(input: string): number {
@@ -311,7 +308,7 @@ function amountNumber(input: string): number {
     input = input.substring(0, input.length - 1);
   }
   input = input.replace(/,/g, '');
-  return Number(input);
+  return Number(input || 0);
 }
 
 const RebateToCustomer = memo(function RebateToCustomer({
