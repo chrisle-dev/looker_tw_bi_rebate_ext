@@ -331,6 +331,22 @@ function normalizeRebateData(data: Record<string, any>): Record<string, any> {
   return output;
 }
 
+function formatRebateData(data: Record<string, any>): Record<string, any> {
+  const output: Record<string, any> = {};
+  Object.keys(data).forEach((uid: string) => {
+    const values = data[uid];
+    output[uid] = { ...values };
+    Object.keys(values).forEach((fieldName: string) => {
+      const field = CUSTOM_FIELDS.find((item) => item.name === fieldName);
+      if (field?.type === InputType.Number) {
+        output[uid][fieldName] = formatAmount(values[fieldName]);
+      }
+    });
+  });
+
+  return output;
+}
+
 const RebateToCustomer = memo(function RebateToCustomer({
   fields,
   customerInfo,
@@ -368,14 +384,7 @@ const RebateToCustomer = memo(function RebateToCustomer({
     setLocalValues(newData);
     calculateBalances(customerInfo, uid, normalizeRebateData(newData), function (newValue: Record<string, any>) {
       if (newValue) {
-        newValue = {
-          ...newValue,
-          [uid]: {
-            ...newValue[uid],
-            [fieldName]: data[fieldName],
-          },
-        };
-        setLocalValues(newValue);
+        setLocalValues(formatRebateData(newValue));
       }
     });
   };
