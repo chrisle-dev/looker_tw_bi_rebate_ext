@@ -308,7 +308,7 @@ function amountNumber(input: string): number {
     input = input.substring(0, input.length - 1);
   }
   input = input.replace(/,/g, '');
-  return Number(input || 0);
+  return Number(input) || 0;
 }
 
 const RebateToCustomer = memo(function RebateToCustomer({
