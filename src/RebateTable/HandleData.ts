@@ -29,12 +29,18 @@ enum CustomFieldName {
   BalancePercentage = 'Balance %',
 }
 
+export enum InputType {
+  Text = 'text',
+  Number = 'number',
+  Select = 'select',
+}
+
 export type Field = {
   label: string;
   name: string;
   align?: any;
   defaultValue?: any;
-  type?: 'select' | 'inputnumber' | 'text';
+  type?: InputType;
   options?: { label: string; value: any }[];
   savable?: boolean;
   hidden?: boolean;
@@ -104,7 +110,7 @@ export const CUSTOM_FIELDS: Field[] = [
     name: CustomFieldName.RebateType,
     defaultValue: RebateType.CD,
     align: 'left',
-    type: 'select',
+    type: InputType.Select,
     options: [
       {
         label: RebateType.FG,
@@ -122,7 +128,7 @@ export const CUSTOM_FIELDS: Field[] = [
     name: CustomFieldName.QtyOrAmt,
     defaultValue: -1,
     align: 'right',
-    type: 'inputnumber',
+    type: InputType.Number,
     savable: true,
   },
   {
@@ -130,7 +136,7 @@ export const CUSTOM_FIELDS: Field[] = [
     name: CustomFieldName.SellingPrice,
     defaultValue: 0,
     align: 'right',
-    type: 'inputnumber',
+    type: InputType.Number,
     savable: true,
   },
   {
@@ -138,7 +144,7 @@ export const CUSTOM_FIELDS: Field[] = [
     name: CustomFieldName.RebateAmt,
     defaultValue: 0,
     align: 'right',
-    type: 'text',
+    type: InputType.Text,
     savable: true,
     render: (value: any) => Math.round(Number(value)).toLocaleString(),
   },
@@ -147,7 +153,7 @@ export const CUSTOM_FIELDS: Field[] = [
     name: CustomFieldName.Balance,
     defaultValue: 0,
     align: 'right',
-    type: 'text',
+    type: InputType.Text,
     render: (value: any) => Math.round(Number(value)).toLocaleString(),
   },
   {
@@ -155,7 +161,7 @@ export const CUSTOM_FIELDS: Field[] = [
     name: CustomFieldName.BalancePercentage,
     defaultValue: 0,
     align: 'right',
-    type: 'text',
+    type: InputType.Text,
     render: (value: any) => Number(value).toFixed(1) + '%',
   },
 ];

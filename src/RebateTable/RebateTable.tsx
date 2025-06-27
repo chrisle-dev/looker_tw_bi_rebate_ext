@@ -29,6 +29,7 @@ import {
   CheckBalanceAll,
   CheckBalanceEach,
   NamespaceArtifactValues,
+  InputType,
   calculateSavedArtifactValues,
   sortAndGroupQueryData,
   getSavableArtifacts,
@@ -311,6 +312,22 @@ function amountNumber(input: string): number {
   return Number(input) || 0;
 }
 
+function normalizeRebateData(data: Record<string, any>): Record<string, any> {
+  const output: Record<string, any> = {};
+  Object.keys(data).forEach((uid: string) => {
+    const values = data[uid];
+    output[uid] = { ...values };
+    Object.keys(values).forEach((fieldName: string) => {
+      const field = CUSTOM_FIELDS.find((item) => item.name === fieldName);
+      if (field?.type === InputType.Number) {
+        output[uid][fieldName] = amountNumber(values[fieldName]);
+      }
+    });
+  });
+
+  return output;
+}
+
 const RebateToCustomer = memo(function RebateToCustomer({
   fields,
   customerInfo,
@@ -333,8 +350,9 @@ const RebateToCustomer = memo(function RebateToCustomer({
     setLocalValues(savedData);
   }, [savedData]);
 
-  const saveDataLocal = (uid: string, isNumber: boolean, data: Record<string, any>) => {
-    const fieldName = Object.keys(data)[0];
+  const saveDataLocal = (uid: string, field: Field, data: Record<string, any>) => {
+    const isNumber = field.type === InputType.Number;
+    const fieldName = field.name;
     if (isNumber) {
       const v = formatAmount(data[fieldName]);
       data[fieldName] = v;
@@ -345,26 +363,18 @@ const RebateToCustomer = memo(function RebateToCustomer({
       ...data,
     };
     setLocalValues(newData);
-    calculateBalances(
-      customerInfo,
-      uid,
-      {
-        ...newData,
-        [uid]: { ...newData[uid], [fieldName]: isNumber ? amountNumber(data[fieldName]) : data[fieldName] },
-      },
-      function (newValue: Record<string, any>) {
-        if (newValue) {
-          newValue = {
-            ...newValue,
-            [uid]: {
-              ...newValue[uid],
-              [fieldName]: data[fieldName],
-            },
-          };
-          setLocalValues(newValue);
-        }
-      },
-    );
+    calculateBalances(customerInfo, uid, normalizeRebateData(newData), function (newValue: Record<string, any>) {
+      if (newValue) {
+        newValue = {
+          ...newValue,
+          [uid]: {
+            ...newValue[uid],
+            [fieldName]: data[fieldName],
+          },
+        };
+        setLocalValues(newValue);
+      }
+    });
   };
 
   return (
@@ -420,28 +430,28 @@ const CustomField = ({
   field: Field;
   uid: string;
   data: any;
-  saveDataLocal: (uid: string, isNumber: boolean, data: Record<string, any>) => void;
+  saveDataLocal: (uid: string, field: Field, data: Record<string, any>) => void;
 }) => {
   const localValue = data?.[field.name] ?? field.defaultValue;
   const rendered = field.render ? field.render(localValue) : localValue;
 
   return (
     <>
-      {field.type === 'text' && <Span>{rendered}</Span>}
-      {field.type === 'select' && (
+      {field.type === InputType.Text && <Span>{rendered}</Span>}
+      {field.type === InputType.Select && (
         <Select
           minWidth={100}
           value={localValue}
           options={field.options}
-          onChange={(value) => saveDataLocal(uid, false, { [field.name]: value })}
+          onChange={(value) => saveDataLocal(uid, field, { [field.name]: value })}
         />
       )}
-      {field.type === 'inputnumber' && (
+      {field.type === InputType.Number && (
         <InputText
           type="text"
           minWidth={100}
           value={localValue}
-          onChange={(e) => saveDataLocal(uid, true, { [field.name]: e.target.value })}
+          onChange={(e) => saveDataLocal(uid, field, { [field.name]: e.target.value })}
         />
       )}
     </>
