@@ -140,7 +140,7 @@ export const CUSTOM_FIELDS: Field[] = [
     align: 'right',
     type: 'text',
     savable: true,
-    render: (value: any) => Number(value).toLocaleString(),
+    render: (value: any) => Math.round(Number(value)).toLocaleString(),
   },
   {
     label: 'Balance',
@@ -148,7 +148,7 @@ export const CUSTOM_FIELDS: Field[] = [
     defaultValue: 0,
     align: 'right',
     type: 'text',
-    render: (value: any) => Number(value).toLocaleString(),
+    render: (value: any) => Math.round(Number(value)).toLocaleString(),
   },
   {
     label: 'Balance %',
@@ -371,13 +371,13 @@ function calculateCheckBalanceAll(balance: CheckBalanceAll): CheckBalanceAll {
     values.nonDm.remaining = values.nonDm.total - values.nonDm.used;
     values.total.used = values.dm.used + values.nonDm.used;
     values.total.remaining = values.total.total - values.total.used;
-    _all.dm.total += values.dm.total;
     _all.dm.used += values.dm.used;
-    _all.nonDm.total += values.nonDm.total;
     _all.nonDm.used += values.nonDm.used;
     if (!contractGroupUsedMap[values.contractGroup]) {
       contractGroupUsedMap[values.contractGroup] = true;
       _all.total.total += values.total.total;
+      _all.dm.total += values.dm.total;
+      _all.nonDm.total += values.nonDm.total;
     }
     balance[customerName] = values;
   });

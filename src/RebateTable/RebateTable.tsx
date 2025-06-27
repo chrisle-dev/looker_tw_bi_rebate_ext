@@ -48,7 +48,7 @@ const enum SaveState {
 }
 
 function formatBalance(value: number) {
-  return Math.floor(value).toLocaleString();
+  return Math.round(value).toLocaleString();
 }
 
 const RebateTable = () => {
@@ -67,6 +67,7 @@ const RebateTable = () => {
       total: { total: 0, used: 0, remaining: 0 },
       dm: { total: 0, used: 0, remaining: 0 },
       nonDm: { total: 0, used: 0, remaining: 0 },
+      contractGroup: '',
     },
   });
 
