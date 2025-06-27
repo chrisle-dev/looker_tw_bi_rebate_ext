@@ -332,22 +332,6 @@ function normalizeRebateData(data: Record<string, any>): Record<string, any> {
   return output;
 }
 
-function formatRebateData(data: Record<string, any>): Record<string, any> {
-  const output: Record<string, any> = {};
-  Object.keys(data).forEach((uid: string) => {
-    const values = data[uid];
-    output[uid] = { ...values };
-    Object.keys(values).forEach((fieldName: string) => {
-      const field = CUSTOM_FIELDS.find((item) => item.name === fieldName);
-      if (field?.type === InputType.Number) {
-        output[uid][fieldName] = formatAmount(values[fieldName]);
-      }
-    });
-  });
-
-  return output;
-}
-
 const RebateToCustomer = memo(function RebateToCustomer({
   fields,
   customerInfo,
@@ -370,13 +354,7 @@ const RebateToCustomer = memo(function RebateToCustomer({
     setLocalValues(savedData);
   }, [savedData]);
 
-  const saveDataLocal = (uid: string, field: Field, data: Record<string, any>) => {
-    const isNumber = field.type === InputType.Number;
-    const fieldName = field.name;
-    if (isNumber) {
-      const v = formatAmount(data[fieldName]);
-      data[fieldName] = v;
-    }
+  const saveDataLocal = (uid: string, data: Record<string, any>) => {
     const newData = { ...localValues };
     newData[uid] = {
       ...newData[uid],
@@ -385,7 +363,7 @@ const RebateToCustomer = memo(function RebateToCustomer({
     setLocalValues(newData);
     calculateBalances(customerInfo, uid, normalizeRebateData(newData), function (newValue: Record<string, any>) {
       if (newValue) {
-        setLocalValues(formatRebateData(newValue));
+        setLocalValues(newValue);
       }
     });
   };
@@ -443,9 +421,12 @@ const CustomField = ({
   field: Field;
   uid: string;
   data: any;
-  saveDataLocal: (uid: string, field: Field, data: Record<string, any>) => void;
+  saveDataLocal: (uid: string, data: Record<string, any>) => void;
 }) => {
-  const localValue = data?.[field.name] ?? field.defaultValue;
+  let localValue = data?.[field.name] ?? field.defaultValue;
+  if (field.type === InputType.Number) {
+    localValue = formatAmount(localValue);
+  }
   const rendered = field.render ? field.render(localValue) : localValue;
 
   return (
@@ -456,7 +437,7 @@ const CustomField = ({
           minWidth={100}
           value={localValue}
           options={field.options}
-          onChange={(value) => saveDataLocal(uid, field, { [field.name]: value })}
+          onChange={(value) => saveDataLocal(uid, { [field.name]: value })}
         />
       )}
       {field.type === InputType.Number && (
@@ -464,7 +445,7 @@ const CustomField = ({
           type="text"
           minWidth={100}
           value={localValue}
-          onChange={(e) => saveDataLocal(uid, field, { [field.name]: e.target.value })}
+          onChange={(e) => saveDataLocal(uid, { [field.name]: e.target.value })}
         />
       )}
     </>
